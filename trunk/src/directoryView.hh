@@ -57,6 +57,7 @@ class PuMP_DirectoryView : public QTreeView
 	
 	signals:
 		void overviewRequested(const QFileInfo &info);
+		void refreshRequested();
 		void viewerRequested(const QFileInfo &info, bool newPage);
 };
 

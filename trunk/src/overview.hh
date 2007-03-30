@@ -26,6 +26,7 @@
 #include <QAction>
 #include <QDir>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QImage>
 #include <QImageReader>
 #include <QList>
@@ -34,10 +35,9 @@
 #include <QStringList>
 #include <QThread>
 
-#define MAX_VISIBLE_NAME_LENGTH	15
-#define THUMBNAIL_SIZE			64
-#define GRID_MARGIN_X			10
-#define GRID_MARGIN_Y			60
+#define THUMB_SIZE			64
+#define ITEM_STRETCH		2.5
+#define ITEM_SPACING		10
 
 /*****************************************************************************/
 
@@ -46,12 +46,15 @@ class PuMP_OverviewModel : public QAbstractListModel
 	Q_OBJECT
 
 	protected:
+		QFontMetrics *fontMetrics;
+
 		QList<QPixmap> pixmaps;
 		QList<QString> names;
 		QList<QString> properties;
 	
 	public:
-		PuMP_OverviewModel(QObject *parent = 0) : QAbstractListModel(parent){}
+		PuMP_OverviewModel(QFontMetrics *fontMetrics = 0, QObject *parent = 0);
+		~PuMP_OverviewModel();
 
 		void addImage(
 			const QPixmap &pixmap,
@@ -67,6 +70,7 @@ class PuMP_OverviewModel : public QAbstractListModel
 		int getRowFromName(const QString &name) const;
 		bool removeRows(int row, int count, const QModelIndex &parent);
 		int rowCount(const QModelIndex &parent) const;
+		void setFontMetrics(const QFontMetrics &fontMetrics);
 };
 
 /*****************************************************************************/
@@ -100,7 +104,8 @@ class PuMP_OverviewLoader : public QThread
 		void processedImage(
 			const QString &name,
 			const QString &properties,
-			const QImage &image);
+			const QImage &image,
+			bool wasKilled);
 };
 
 /*****************************************************************************/
@@ -129,6 +134,7 @@ class PuMP_Overview : public QListView
 		~PuMP_Overview();
 
 		void create(const QFileInfo &info);
+		void reload();
 		void stop();
 	
 	protected slots:
@@ -143,7 +149,8 @@ class PuMP_Overview : public QListView
 		void on_loader_processedImage(
 			const QString &name,
 			const QString &properties,
-			const QImage &image);
+			const QImage &image,
+			bool wasKilled);
 	
 	signals:
 		void updateStatusBar(int value, const QString &text);

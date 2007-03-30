@@ -24,6 +24,7 @@
 
 #include <QFileInfo>
 #include <QImage>
+#include <QPixmap>
 #include <QScrollArea>
 #include <QThread>
 #include <QWidget>
@@ -57,28 +58,20 @@ class PuMP_Display : public QWidget
 	Q_OBJECT
 	
 	protected:
-		bool scaled;
-
-		PuMP_DisplayLoader loader;
-
-		QFileInfo info;
-		QImage image;
-		QImage original;
-
 		void mousePressEvent(QMouseEvent *event);
 		void paintEvent(QPaintEvent *event);
 	
 	public:
+		bool scaled;
+
+		QImage image;
+		QPixmap displayed;
+
+		PuMP_DisplayLoader loader;
+
 		PuMP_Display(const QFileInfo &info = QFileInfo(), QWidget *parent = 0);
 
-		void mirror(bool horizontal = false);
-		void rotate(bool clockwise = true);
-		void setImage(const QFileInfo &info);
-
 		QSize sizeHint() const;
-
-		void zoomIn();
-		void zoomOut();
 	
 	public slots:
 		void on_loader_imageIsNull(const QFileInfo &info);

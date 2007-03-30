@@ -20,12 +20,34 @@
  */
 
 #include <QContextMenuEvent>
+#include <QDebug>
 #include <QMenu>
 #include <QMessageBox>
 
 #include "overview.hh"
 
 /*****************************************************************************/
+
+/**
+ * Constructor of class PuMP_OverviewModel.
+ * @param	fontMetrics	Pointer on the font-metric of the parent-widget.
+ */
+PuMP_OverviewModel::PuMP_OverviewModel(
+	QFontMetrics *fontMetrics,
+	QObject *parent)
+	: QAbstractListModel(parent)
+{
+	if(fontMetrics == NULL) this->fontMetrics = NULL;
+	else this->fontMetrics = new QFontMetrics(*fontMetrics);
+}
+
+/**
+ * Destructor of class PuMP_OverviewModel.
+ */
+PuMP_OverviewModel::~PuMP_OverviewModel()
+{
+	if(fontMetrics != NULL) delete fontMetrics;
+}
 
 /**
  * Function that adds an image with its properties to this model. Duplicates
@@ -66,19 +88,24 @@ QVariant PuMP_OverviewModel::data(
 	else if(role == Qt::DisplayRole)
 	{
 		QString display = names.value(index.row());
-		if(display.length() > MAX_VISIBLE_NAME_LENGTH)
+		if(fontMetrics != NULL)
 		{
-			display.remove(
-				MAX_VISIBLE_NAME_LENGTH,
-				display.length() - MAX_VISIBLE_NAME_LENGTH);
-			display += "...";
+			display = fontMetrics->elidedText(
+				display,
+				Qt::ElideRight,
+				(int)(ITEM_STRETCH - 1) * THUMB_SIZE);
 		}
-		
-		if(!properties.value(index.row()).isEmpty())
-			display += "\n" + properties.value(index.row());
+
+		QString props = properties.value(index.row());
+		if(!props.isEmpty()) display += "\n" + props;
 
 		return display;
 	}
+	else if(role == Qt::SizeHintRole)
+		return QSize(
+			(int)(ITEM_STRETCH * THUMB_SIZE),
+			THUMB_SIZE + ITEM_SPACING);
+//	else if(role == Qt::ToolTipRole)
 
 	return QVariant();
 }
@@ -161,6 +188,16 @@ int PuMP_OverviewModel::rowCount(const QModelIndex &parent) const
 	return pixmaps.size();
 }
 
+/**
+ * Function to set the used fontMetrics.
+ * @param	fontMetrics	The font Metric of the parent-widget.	
+ */
+void PuMP_OverviewModel::setFontMetrics(const QFontMetrics &fontMetrics)
+{
+	if(this->fontMetrics == NULL)
+		this->fontMetrics = new QFontMetrics(fontMetrics);
+}
+
 /*****************************************************************************/
 
 /**
@@ -172,8 +209,8 @@ int PuMP_OverviewModel::rowCount(const QModelIndex &parent) const
 PuMP_OverviewLoader::PuMP_OverviewLoader(QObject *parent) : QThread(parent)
 {
 	killed = false;
-	size.setWidth(THUMBNAIL_SIZE);
-	size.setHeight(THUMBNAIL_SIZE);
+	size.setWidth(THUMB_SIZE);
+	size.setHeight(THUMB_SIZE);
 }
 
 /**
@@ -193,18 +230,18 @@ void PuMP_OverviewLoader::run()
 		rProperties += QString::number(rSize.width())
 			+ "x"
 			+ QString::number(rSize.height())
-			+ " Pixels\n"
-			+ QString::number(info.size())
-			+ " Bytes";
+			+ "\n"
+			+ QString::number((double)(info.size() / 1024), 'f', 1)
+			+ " KB";
 
 		if(rSize.height() > size.height() || rSize.width() > size.width())
 		{
 			if(rSize.height() > rSize.width())
 				size.setWidth(
-					(THUMBNAIL_SIZE * 100 / rSize.height()) *
+					(THUMB_SIZE * 100 / rSize.height()) *
 					rSize.width() / 100);
 			else size.setHeight(
-				(THUMBNAIL_SIZE * 100 / rSize.width()) *
+				(THUMB_SIZE * 100 / rSize.width()) *
 				rSize.height() / 100);
 			
 			reader.setScaledSize(size);
@@ -227,7 +264,7 @@ void PuMP_OverviewLoader::run()
 		return;
 	}
 	
-	emit processedImage(rName, rProperties, result);
+	emit processedImage(rName, rProperties, result, killed);
 }
 
 /**
@@ -242,8 +279,8 @@ void PuMP_OverviewLoader::processImage(const QFileInfo &fileInfo)
 	reader.setFileName(info.filePath());
 	reader.setScaledSize(QSize());
 
-	size.setWidth(THUMBNAIL_SIZE);
-	size.setHeight(THUMBNAIL_SIZE);
+	size.setWidth(THUMB_SIZE);
+	size.setHeight(THUMB_SIZE);
 
 	start();
 }
@@ -303,6 +340,7 @@ PuMP_Overview::PuMP_Overview(
 		SLOT(on_openInNewTabAction_triggered()));
 
 	model.setParent(this);
+	model.setFontMetrics(fontMetrics());
 	loader.setParent(this);
 	connect(&loader, SIGNAL(finished()), this, SLOT(on_loader_finished()));
 	connect(
@@ -315,27 +353,27 @@ PuMP_Overview::PuMP_Overview(
 		SIGNAL(processedImage(
 			const QString &,
 			const QString &,
-			const QImage &)),
+			const QImage &,
+			bool)),
 		this,
 		SLOT(on_loader_processedImage(
 			const QString &,
 			const QString &,
-			const QImage &)));
+			const QImage &,
+			bool)));
 	
 	dir.setNameFilters(nameFilters);
 	
-	setViewMode(QListView::IconMode);
+	setViewMode(QListView::ListMode);
 	setFlow(QListView::LeftToRight);
-	setGridSize(
-		QSize(THUMBNAIL_SIZE + GRID_MARGIN_X,
-		THUMBNAIL_SIZE + GRID_MARGIN_Y));
-	setIconSize(QSize(THUMBNAIL_SIZE, THUMBNAIL_SIZE));
+	setIconSize(QSize(THUMB_SIZE, THUMB_SIZE));
 	setLayoutMode(QListView::Batched);
 	setMinimumWidth(450);
 	setModel(&model);
 	setMovement(QListView::Static);
 	setResizeMode(QListView::Fixed);
 	setWrapping(true);
+	setUniformItemSizes(true);
 	connect(
 		this,
 		SIGNAL(activated(const QModelIndex &)),
@@ -472,11 +510,53 @@ void PuMP_Overview::create(const QFileInfo &info)
 		if(!current.isEmpty())
 		{
 			progressMax = current.size();
-			QFileInfo first = current.takeFirst();
+			QFileInfo first = current.first();
 			emit updateStatusBar(
 				progress * 100 / progressMax,
 				first.fileName());
-			loader.processImage(first);
+			
+			if(!loader.isRunning())
+			{
+				first = current.takeFirst();
+				loader.processImage(first);
+			}
+		}
+	}
+}
+
+/**
+ * Function that refreshes and reloads the current directory.
+ */
+void PuMP_Overview::reload()
+{
+	stop();
+	if(dir.exists())
+	{
+		QModelIndex dummy;
+		model.removeRows(0, model.rowCount(dummy), dummy);
+
+		dir.refresh();
+		current = dir.entryInfoList(
+			QDir::Files | QDir::AllDirs |
+			QDir::NoDotAndDotDot | QDir::Readable,
+			QDir::Name | QDir::DirsFirst);
+	
+		progress = 0;
+		progressMax = 1;
+
+		if(!current.isEmpty())
+		{
+			progressMax = current.size();
+			QFileInfo first = current.first();
+			emit updateStatusBar(
+				progress * 100 / progressMax,
+				first.fileName());
+			
+			if(!loader.isRunning())
+			{
+				first = current.takeFirst();
+				loader.processImage(first);
+			}
 		}
 	}
 }
@@ -492,7 +572,7 @@ void PuMP_Overview::stop()
 	current.clear();
 	emit updateStatusBar(100, QString());
 
-	if(loader.isRunning()) loader.setKilled();
+	loader.setKilled();
 }
 
 /**
@@ -533,13 +613,15 @@ void PuMP_Overview::on_loader_imageIsNull(const QFileInfo &info)
  * @param	name		The file-name of the image that was processed.
  * @param	properties	The property-string of the image.
  * @param	image		The scaled image itself.
+ * @param	wasKilled	Flag indicating whether the thread was killed or not.
  */
 void PuMP_Overview::on_loader_processedImage(
 	const QString &name,
 	const QString &properties,
-	const QImage &image)
+	const QImage &image,
+	bool wasKilled)
 {
-	if(!loader.wasKilled())
+	if(!wasKilled)
 	{
 		model.addImage(QPixmap::fromImage(image), name, properties);
 		update();

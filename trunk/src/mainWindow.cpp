@@ -66,6 +66,11 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 		SLOT(createOverview(const QFileInfo &)));
 	connect(
 		directoryView,
+		SIGNAL(refreshRequested()),
+		imageView,
+		SLOT(refreshOverview()));
+	connect(
+		directoryView,
 		SIGNAL(viewerRequested(const QFileInfo &, bool)),
 		imageView,
 		SLOT(display(const QFileInfo &, bool)));	

@@ -75,7 +75,6 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 	setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 
 	scaled = false;
-	this->info = info;
 
 	loader.setParent(this);
 	connect(
@@ -88,7 +87,7 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 		SIGNAL(imageLoaded(const QImage &)),
 		this,
 		SLOT(on_loader_imageLoaded(const QImage &)));
-	if(info.exists()) loader.load(this->info);
+	if(info.exists()) loader.load(info);
 }
 
 /**
@@ -100,19 +99,19 @@ void PuMP_Display::mousePressEvent(QMouseEvent *event)
 	if(event->buttons() == Qt::MidButton)
 	{
 		scaled = !scaled;
-		if((original.width() > parentWidget()->width() ||
-			original.height() > parentWidget()->height()) &&
+		if((image.width() > parentWidget()->width() ||
+			image.height() > parentWidget()->height()) &&
 			scaled)
 		{
-			image = original.scaled(
-				parentWidget()->size(),
-				Qt::KeepAspectRatio,
-				Qt::SmoothTransformation);
+			displayed = QPixmap::fromImage(
+				image.scaled(
+					parentWidget()->size(),
+					Qt::KeepAspectRatio,
+					Qt::SmoothTransformation));
 		}
-		else image = original;
+		else displayed = QPixmap::fromImage(image);
 
 		adjustSize();
-		update();
 	}
 	else event->ignore();
 }
@@ -124,46 +123,9 @@ void PuMP_Display::mousePressEvent(QMouseEvent *event)
  */
 void PuMP_Display::paintEvent(QPaintEvent *event)
 {
-	Q_UNUSED(event);
-	QPainter painter;
-	painter.begin(this);
-	painter.drawImage(QPoint(0, 0), image);
-	painter.end();
-}
-
-/**
- * Function that mirrors the display's image horizontal or vertical.
- * @param	horizontal	Flag whether the image is mirrored horizontal or not.
- */
-void PuMP_Display::mirror(bool horizontal)
-{
-	Q_UNUSED(horizontal);
-
-	qDebug() << "Unimplemented!";
-//	image = image.mirrored(horizontal, !horizontal);
-	update();
-}
-
-/**
- * Function that rotates the image according to the given flag by 90 degrees.
- * @param	clockwise	Flag indicating the direction of the rotation.	
- */
-void PuMP_Display::rotate(bool clockwise)
-{
-	Q_UNUSED(clockwise);
-
-	qDebug() << "Unimplemented!";
-	update();
-}
-
-/**
- * Function to set the image displayed by this display.
- * @param	info	The QFileInfo-Object representing the image to show.
- */
-void PuMP_Display::setImage(const QFileInfo &info)
-{
-	this->info = info;
-	loader.load(this->info);
+	QPainter painter(this);
+	painter.setClipRegion(event->region());
+	painter.drawPixmap(event->rect(), displayed, event->rect());
 }
 
 /**
@@ -173,27 +135,9 @@ void PuMP_Display::setImage(const QFileInfo &info)
 QSize PuMP_Display::sizeHint() const
 {
 	QSize dsize = size();
-	if(!image.isNull()) dsize = image.size();
+	if(!displayed.isNull()) dsize = displayed.size();
 	 
 	return dsize;
-}
-
-/**
- * Function that in-zooms the image by 20 percent.
- */
-void PuMP_Display::zoomIn()
-{
-	qDebug() << "Unimplemented!";
-	update();
-}
-
-/**
- * Function that out-zooms the image by 20 percent.
- */
-void PuMP_Display::zoomOut()
-{
-	qDebug() << "Unimplemented!";
-	update();
 }
 
 /**
@@ -214,10 +158,10 @@ void PuMP_Display::on_loader_imageIsNull(const QFileInfo &info)
  */
 void PuMP_Display::on_loader_imageLoaded(const QImage &image)
 {
-	original = image;
-	this->image = original;
+	this->image = image;
+	displayed = QPixmap::fromImage(image);
 
-	resize(original.size());
+	resize(displayed.size());
 	repaint();
 }
 
@@ -232,7 +176,6 @@ void PuMP_Display::on_loader_imageLoaded(const QImage &image)
 PuMP_DisplayView::PuMP_DisplayView(const QFileInfo &info, QWidget *parent)
 	: QScrollArea(parent)
 {
-	this->info = info;
 	lastPos.setX(0);
 	lastPos.setY(0);
 
@@ -242,12 +185,11 @@ PuMP_DisplayView::PuMP_DisplayView(const QFileInfo &info, QWidget *parent)
 		SIGNAL(loadingError()),
 		this,
 		SLOT(on_display_loadingError()));
-	display.setImage(this->info);
+	setImage(info);
 
 	horizontalScrollBar()->setMinimum(0);
 	verticalScrollBar()->setMinimum(0);
 	
-	setAcceptDrops(true);
 	setAlignment(Qt::AlignCenter);
 	setBackgroundRole(QPalette::Dark);
 	setCursor(Qt::OpenHandCursor);
@@ -266,14 +208,15 @@ void PuMP_DisplayView::mouseMoveEvent(QMouseEvent *event)
 		if(horizontalScrollBar()->maximum() != 0 &&
 			verticalScrollBar()->maximum() != 0)
 		{
+			setUpdatesEnabled(false);
 			setCursor(Qt::ClosedHandCursor);
 			
 			int x = lastPos.x() - event->x();
 			int y = lastPos.y() - event->y();
 			
 			moveBy(x, y);
-			update();
 			lastPos = event->pos();
+			setUpdatesEnabled(true);
 		}
 	}
 	else event->ignore();
@@ -311,11 +254,9 @@ void PuMP_DisplayView::moveBy(int x, int y)
 	double pY = s.height() / verticalScrollBar()->maximum();
 	int valX = horizontalScrollBar()->value();
 	int valY = verticalScrollBar()->value();
-	
-	setUpdatesEnabled(false);
+
 	horizontalScrollBar()->setValue((int)(valX + x * pX));
 	verticalScrollBar()->setValue((int)(valY + y * pY));
-	setUpdatesEnabled(true);
 }
 
 /**
@@ -337,19 +278,27 @@ QString PuMP_DisplayView::filePath() const
 }
 
 /**
- * Convenience-function that calls the corresponding display-function.
+ * Function that mirrors the display's image horizontal or vertical.
+ * @param	horizontal	Flag whether the image is mirrored horizontal or not.
  */
 void PuMP_DisplayView::mirror(bool horizontal)
 {
-	display.mirror(horizontal);
+	Q_UNUSED(horizontal);
+
+	qDebug() << "Unimplemented!";
+	display.update();
 }
 
 /**
- * Convenience-function that calls the corresponding display-function.
+ * Function that rotates the image according to the given flag by 90 degrees.
+ * @param	clockwise	Flag indicating the direction of the rotation.	
  */
 void PuMP_DisplayView::rotate(bool clockwise)
 {
-	display.rotate(clockwise);
+	Q_UNUSED(clockwise);
+
+	qDebug() << "Unimplemented!";
+	display.update();
 }
 
 /**
@@ -359,23 +308,25 @@ void PuMP_DisplayView::rotate(bool clockwise)
 void PuMP_DisplayView::setImage(const QFileInfo &info)
 {
 	this->info = info;
-	display.setImage(this->info);
+	display.loader.load(this->info);
 }
 
 /**
- * Convenience-function that calls the corresponding display-function.
+ * Function that in-zooms the image by 20 percent.
  */
 void PuMP_DisplayView::zoomIn()
 {
-	display.zoomIn();
+	qDebug() << "Unimplemented!";
+	display.update();
 }
 
 /**
- * Convenience-function that calls the corresponding display-function.
+ * Function that out-zooms the image by 20 percent.
  */
 void PuMP_DisplayView::zoomOut()
 {
-	display.zoomOut();
+	qDebug() << "Unimplemented!";
+	display.update();
 }
 
 /**

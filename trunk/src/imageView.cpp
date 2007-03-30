@@ -217,6 +217,14 @@ void PuMP_ImageView::on_updateStatusBar(int value, const QString &text)
 }
 
 /**
+ * Slot-function that refreshes the overview.
+ */
+void PuMP_ImageView::refreshOverview()
+{
+	overview->reload();
+}
+
+/**
  * Slot-function that is called to rotate the current image by 90 degrees.
  * @param	clockwise	Flag indicating the direction of the rotation.
  */

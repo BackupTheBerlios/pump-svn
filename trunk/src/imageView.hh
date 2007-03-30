@@ -63,6 +63,7 @@ class PuMP_ImageView : public QTabWidget
 		void on_displayView_loadingError(PuMP_DisplayView *view = NULL);
 		void on_updateStatusBar(int value, const QString &text);
 
+		void refreshOverview();
 		void rotate(bool clockwise);
 		void stopCreateOverview();
 		void zoomIn();

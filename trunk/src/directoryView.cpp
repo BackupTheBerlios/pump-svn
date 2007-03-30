@@ -171,7 +171,11 @@ void PuMP_DirectoryView::on_openInNewTabAction_triggered()
 void PuMP_DirectoryView::on_refreshAction_triggered()
 {
 	QModelIndex index = currentIndex();
-	if(index.isValid()) model.refresh(index);
+	if(index.isValid())
+	{
+		model.refresh(index);
+		emit refreshRequested();
+	}
 }
 
 
