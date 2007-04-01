@@ -26,7 +26,15 @@
 #include <QFileInfo>
 #include <QList>
 #include <QSize>
+#include <QString>
 #include <QThread>
+#include <QDataStream>
+#include <QMessageBox>
+#include <QDialog>
+#include <QPushButton>
+
+
+#define ZLIB_CHUNK 65536 // increase for tuning
 
 /******************************************************************************/
 
@@ -34,20 +42,49 @@ class PuMP_ExportThread : public QThread
 {
 	Q_OBJECT
 
-	protected:
-		void run();
-
-	public:
-		PuMP_ExportThread(QObject *parent = 0);
-		~PuMP_ExportThread();
+	private:
+		QList<QFileInfo> exp_files;
+		QFileInfo exp_dest;
+		QFileInfo exp_watermark;
+		QSize exp_watermarkPos;
+		QSize exp_destSize;
+		int exp_options;
 		
-		void exportPix(
+		void zip_append(QFileInfo appendFile, QFileInfo archive); 
+		void gz_append(QFileInfo appendFile, QFileInfo archive);
+		
+		/*void exportPix(
 			QList<QFileInfo> &files,
 			const QFileInfo &dest,
 			const QFileInfo &watermark,
 			const QSize &watermarkPos,
 			const QSize &destSize,
-			int options);
+			int options
+		);*/
+
+	protected:
+		void run();
+		bool killed;
+		
+	public:
+		PuMP_ExportThread(QObject *parent = 0);
+		~PuMP_ExportThread();
+		
+	
+		
+		void doExportPix(QList<QFileInfo> &files,
+			const QFileInfo &dest,
+			const QFileInfo &watermark,
+			const QSize &watermarkPos,
+			const QSize &destSize,
+			int options
+		);
+			
+		void setKilled();
+		bool wasKilled();
+	
+	public slots:
+		void stop();
 
 };
 

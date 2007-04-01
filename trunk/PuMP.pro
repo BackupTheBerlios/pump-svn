@@ -12,7 +12,11 @@ HEADERS = \
 	src/display.hh \
 	src/imageView.hh \
 	src/mainWindow.hh \
-	src/overview.hh
+	src/overview.hh \
+	src/export.hh \
+	src/configDialog.hh \
+	src/configPages.hh \
+	src/zlib/zlib.h
 	
 SOURCES = \
 	src/directoryView.cpp \
@@ -20,7 +24,10 @@ SOURCES = \
 	src/imageView.cpp \
 	src/main.cpp \
 	src/mainWindow.cpp \
-	src/overview.cpp
+	src/overview.cpp \
+	src/export.cpp \
+	src/configDialog.cpp \
+	src/configPages.cpp
 
 # built application not lib
 TEMPLATE = app
@@ -33,3 +40,13 @@ CONFIG += qt release
 
 # defines for win32 builds
 #win32{ RC_FILE = res/PuMP.rc }
+
+# compression libraries
+LIBS += -Lsrc/zlib -lz
+LIBS += -Lsrc/zip -lzip
+
+INCLUDEPATH += \
+    src/zlib \
+    src/zip
+
+

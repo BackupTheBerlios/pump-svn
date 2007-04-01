@@ -13,5 +13,9 @@
 	<file>./viewmag-.png</file>
 	<file>./viewmag1.png</file>
 	<file>./viewmagfit.png</file>
+	<file>./basicConfiguration.png</file>
+	<file>./advancedConfiguration.png</file>
+	<file>./export.png</file>
+	<file>./about.png</file>
 </qresource>
 </RCC>

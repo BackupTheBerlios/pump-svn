@@ -138,6 +138,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	action->setToolTip("Zoom out current image.");
 
 	toolBar.addSeparator();
+
 	addToolBar(&toolBar);
 
 	// setup menubar
