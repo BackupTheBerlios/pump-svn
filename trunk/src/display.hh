@@ -22,6 +22,7 @@
 #ifndef DISPLAY_HH_
 #define DISPLAY_HH_
 
+#include <QAction>
 #include <QFileInfo>
 #include <QImage>
 #include <QPixmap>
@@ -90,9 +91,19 @@ class PuMP_DisplayView : public QScrollArea
 	protected:
 		PuMP_Display display;
 
+		QAction *mirrorHAction;
+		QAction *mirrorVAction;
+		QAction *rotateCWAction;
+		QAction *rotateCCWAction;
+		QAction *sizeOriginalAction;
+		QAction *sizeFittedAction;
+		QAction *zoomInAction;
+		QAction *zoomOutAction;
+	
 		QFileInfo info;
 		QPoint lastPos;
 
+		void contextMenuEvent(QContextMenuEvent *event);
 		void mouseMoveEvent(QMouseEvent *event);
 		void mousePressEvent(QMouseEvent *event);
 		void mouseReleaseEvent(QMouseEvent *event);		
@@ -106,14 +117,24 @@ class PuMP_DisplayView : public QScrollArea
 
 		void mirror(bool horizontal = false);
 		void rotate(bool clockwise = true);
+
 		void setImage(const QFileInfo &info);
+		void setupActions(
+			QAction *mirrorHAction,
+			QAction *mirrorVAction,
+			QAction *rotateCWAction,
+			QAction *rotateCCWAction,
+			QAction *sizeOriginalAction,
+			QAction *sizeFittedAction,
+			QAction *zoomInAction,
+			QAction *zoomOutAction);
 
 		void zoomIn();
 		void zoomOut();
-	
+
 	public slots:
 		void on_display_loadingError();
-
+		
 	signals:
 		void loadingError(PuMP_DisplayView *view);	
 };

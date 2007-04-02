@@ -23,6 +23,8 @@
 #include "imageView.hh"
 #include "mainWindow.hh"
 
+#include <assert.h>
+
 #include <QByteArray>
 #include <QDebug>
 #include <QHBoxLayout>
@@ -61,84 +63,51 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	// connect both
 	connect(
 		directoryView,
-		SIGNAL(overviewRequested(const QFileInfo &)),
+		SIGNAL(openDir(const QFileInfo &)),
 		imageView,
-		SLOT(createOverview(const QFileInfo &)));
+		SLOT(on_openDir(const QFileInfo &)));
 	connect(
 		directoryView,
-		SIGNAL(refreshRequested()),
+		SIGNAL(openImage(const QFileInfo &, bool)),
 		imageView,
-		SLOT(refreshOverview()));
+		SLOT(on_openImage(const QFileInfo &, bool)));
 	connect(
-		directoryView,
-		SIGNAL(viewerRequested(const QFileInfo &, bool)),
 		imageView,
-		SLOT(display(const QFileInfo &, bool)));	
+		SIGNAL(dirOpened(const QFileInfo &)),
+		directoryView,
+		SLOT(on_dirOpened(const QFileInfo &)));	
 	connect(
 		imageView,
 		SIGNAL(updateStatusBar(int, const QString &)),
 		this,
 		SLOT(on_statusBarUpdate(int, const QString &)));
+		
+	// setup global actions
+	setupActions();
 	
 	// toolbar
 	toolBar.setParent(this);
 	toolBar.setMovable(false);
 	toolBar.setAllowedAreas(Qt::TopToolBarArea);
 	toolBar.setToolButtonStyle(Qt::ToolButtonIconOnly);
-
-	QAction *action = toolBar.addAction(
-		QIcon(":/reload.png"),
-		"Reload directory");
-	action->setToolTip("Reload the current directory.");
-
-	action = toolBar.addAction(QIcon(":/add.png"), "Add new tab");
-	action->setToolTip("Add a new tab.");
-	
-	action = toolBar.addAction(QIcon(":/remove.png"), "Remove tab");
-	action->setToolTip("Remove the current tab.");
-	
+	toolBar.insertAction(NULL, previousAction);
+	toolBar.insertAction(NULL, nextAction);
+	toolBar.insertAction(NULL, refreshAction);
+	toolBar.insertAction(NULL, stopAction);
 	toolBar.addSeparator();
-
-	action = toolBar.addAction(
-		QIcon(":/hmirror.png"),
-		"Mirror image horizontally");
-	action->setToolTip("Mirror the current image horizontally.");
-
-	action = toolBar.addAction(
-		QIcon(":/vmirror.png"),
-		"Mirror image vertically");
-	action->setToolTip("Mirror the current image vertically.");
-
-	action = toolBar.addAction(
-		QIcon(":/rotate_ccw.png"),
-		"Rotate image counter-clockwise");
-	action->setToolTip("Rotate the current image counter-clockwise.");
-
-	action = toolBar.addAction(
-		QIcon(":/rotate_cw.png"),
-		"Rotate image clockwise");
-	action->setToolTip("Rotate the current image clockwise.");
-
+	toolBar.insertAction(NULL, addAction);
+	toolBar.insertAction(NULL, closeAction);
 	toolBar.addSeparator();
-
-	action = toolBar.addAction(
-		QIcon(":/viewmag1.png"),
-		"Display image in original size");
-	action->setToolTip("Display the current image in original size.");
-
-	action = toolBar.addAction(
-		QIcon(":/viewmagfit.png"),
-		"Display image fitted to window");
-	action->setToolTip("Display the current image fitted to window.");
-
-	action = toolBar.addAction(QIcon(":/viewmag+.png"), "Zoom in");
-	action->setToolTip("Zoom in current image.");
-
-	action = toolBar.addAction(QIcon(":/viewmag-.png"), "Zoom out");
-	action->setToolTip("Zoom out current image.");
-
+	toolBar.insertAction(NULL, mirrorHAction);
+	toolBar.insertAction(NULL, mirrorVAction);
+	toolBar.insertAction(NULL, rotateCCWAction);
+	toolBar.insertAction(NULL, rotateCWAction);
 	toolBar.addSeparator();
-
+	toolBar.insertAction(NULL, sizeOriginalAction);
+	toolBar.insertAction(NULL, sizeFittedAction);
+	toolBar.insertAction(NULL, zoomInAction);
+	toolBar.insertAction(NULL, zoomOutAction);
+	toolBar.addSeparator();
 	addToolBar(&toolBar);
 
 	// setup menubar
@@ -166,6 +135,21 @@ PuMP_MainWindow::~PuMP_MainWindow()
 {
 	delete directoryView;
 	delete imageView;
+
+	delete addAction;
+	delete closeAction;
+	delete mirrorHAction;
+	delete mirrorVAction;
+	delete nextAction;
+	delete previousAction;
+	delete refreshAction;
+	delete rotateCWAction;
+	delete rotateCCWAction;
+	delete sizeOriginalAction;
+	delete sizeFittedAction;
+	delete stopAction;
+	delete zoomInAction;
+	delete zoomOutAction;
 }
 
 /**
@@ -185,6 +169,93 @@ void PuMP_MainWindow::getSupportedImageFormats()
 	qDebug() << "supported formats:";
 	for(index = 0; index < nameFilters.size(); index++)
 		qDebug() << nameFilters[index]; 
+}
+
+/**
+ * Function that creates all global used actions and gives them to the
+ * appropriate child-widgets (to connect to them).
+ */
+void PuMP_MainWindow::setupActions()
+{
+	addAction = new QAction(QIcon(":/tab_new.png"), "Add new tab", this);
+	addAction->setToolTip("Add a new tab.");
+	
+	closeAction = new QAction(QIcon(":/tab_remove.png"), "Close tab", this);
+	closeAction->setToolTip("Close the current tab.");
+
+	mirrorHAction = new QAction(
+		QIcon(":/hmirror.png"),
+		"Mirror image horizontally",
+		this);
+	mirrorHAction->setToolTip("Mirror the current image horizontally.");
+
+	mirrorVAction = new QAction(
+		QIcon(":/vmirror.png"),
+		"Mirror image vertically",
+		this);
+	mirrorVAction->setToolTip("Mirror the current image vertically.");
+
+	nextAction = new QAction(QIcon(":/forward.png"), "Next directory", this);
+	nextAction->setToolTip("Got to the next directory.");
+
+	previousAction = new QAction(
+		QIcon(":/back.png"),
+		"Previous directory",
+		this);
+	previousAction->setToolTip("Go to the previous directory.");
+
+	refreshAction = new QAction(QIcon(":/reload.png"), "Refresh", this);
+	refreshAction->setToolTip("Refresh the current directory.");
+
+	rotateCCWAction = new QAction(
+		QIcon(":/rotate_ccw.png"),
+		"Rotate image counter-clockwise",
+		this);
+	rotateCCWAction->setToolTip("Rotate the current image counter-clockwise.");
+
+	rotateCWAction = new QAction(
+		QIcon(":/rotate_cw.png"),
+		"Rotate image clockwise",
+		this);
+	rotateCWAction->setToolTip("Rotate the current image clockwise.");
+
+	sizeOriginalAction = new QAction(
+		QIcon(":/viewmag1.png"),
+		"Display image in original size",
+		this);
+	sizeOriginalAction->setToolTip("Display the current image in original size.");
+
+	sizeFittedAction = new QAction(
+		QIcon(":/viewmagfit.png"),
+		"Display image fitted to window",
+		this);
+	sizeFittedAction->setToolTip("Display the current image fitted to window.");
+
+	stopAction = new QAction(QIcon(":/stop.png"), "Stop refresh", this);
+	stopAction->setToolTip("Stop refreshing the current directory.");
+
+	zoomInAction = new QAction(QIcon(":/viewmag+.png"), "Zoom in", this);
+	zoomInAction->setToolTip("Zoom in current image.");
+
+	zoomOutAction = new QAction(QIcon(":/viewmag-.png"), "Zoom out", this);
+	zoomOutAction->setToolTip("Zoom out current image.");
+	
+	assert(directoryView != NULL);
+	assert(imageView != NULL);
+	directoryView->setupActions(refreshAction, stopAction);
+	imageView->setupActions(
+		addAction,
+		closeAction,
+		mirrorHAction,
+		mirrorVAction,
+		refreshAction,
+		rotateCWAction,
+		rotateCCWAction,
+		sizeOriginalAction,
+		sizeFittedAction,
+		stopAction,
+		zoomInAction,
+		zoomOutAction);
 }
 
 /**

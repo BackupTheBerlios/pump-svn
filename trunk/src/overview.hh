@@ -36,6 +36,7 @@
 #include <QThread>
 
 #define THUMB_SIZE			64
+#define ICON_PADDING		10
 #define ITEM_STRETCH		2.5
 #define ITEM_SPACING		10
 
@@ -49,8 +50,8 @@ class PuMP_OverviewModel : public QAbstractListModel
 		QFontMetrics *fontMetrics;
 
 		QList<QPixmap> pixmaps;
-		QList<QString> names;
-		QList<QString> properties;
+		QStringList names;
+		QStringList properties;
 	
 	public:
 		PuMP_OverviewModel(QFontMetrics *fontMetrics = 0, QObject *parent = 0);
@@ -60,6 +61,7 @@ class PuMP_OverviewModel : public QAbstractListModel
 			const QPixmap &pixmap,
 			const QString &name,
 			const QString &props);
+		void clear();
 
 		QVariant data(
 			const QModelIndex &index,
@@ -122,25 +124,27 @@ class PuMP_Overview : public QListView
 		PuMP_OverviewLoader loader;
 
 		QAction *openAction;
-		QAction *openDirAction;
 		QAction *openInNewTabAction;
+		QAction *refreshAction;
+		QAction *stopAction;
+
 		QDir dir;
 		QList<QFileInfo> current;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
+//		void focusInEvent(QFocusEvent *event);
 	
 	public:
 		PuMP_Overview(QStringList &nameFilters, QWidget *parent = 0);
 		~PuMP_Overview();
+		
+		void setupActions(
+			QAction *refreshAction,
+			QAction *stopAction);
 
-		void create(const QFileInfo &info);
-		void reload();
-		void stop();
-	
 	protected slots:
-		void on_activated(const QModelIndex &index);
+		void on_activated(const QModelIndex &index, bool newTab = true);
 		void on_openAction_triggered();
-		void on_openDirAction_triggered();
 		void on_openInNewTabAction_triggered();
 		
 	public slots:
@@ -151,10 +155,15 @@ class PuMP_Overview : public QListView
 			const QString &properties,
 			const QImage &image,
 			bool wasKilled);
+		
+		void on_open(const QFileInfo &info);
+		void on_refresh();
+		void on_stop();
 	
 	signals:
+		void dirOpened(const QFileInfo &info);
+		void openImage(const QFileInfo &info, bool newPage);
 		void updateStatusBar(int value, const QString &text);
-		void viewerRequested(const QFileInfo &info, bool newPage);
 
 };
 

@@ -43,6 +43,21 @@ class PuMP_MainWindow : public QMainWindow
 	protected:
 		PuMP_DirectoryView *directoryView;
 		PuMP_ImageView *imageView;
+		
+		QAction *addAction;
+		QAction *closeAction;
+		QAction *mirrorHAction;
+		QAction *mirrorVAction;
+		QAction *nextAction;
+		QAction *previousAction;
+		QAction *refreshAction;
+		QAction *rotateCWAction;
+		QAction *rotateCCWAction;
+		QAction *sizeOriginalAction;
+		QAction *sizeFittedAction;
+		QAction *stopAction;
+		QAction *zoomInAction;
+		QAction *zoomOutAction;
 
 		QLabel progressBarLabel;
 		QProgressBar progressBar;
@@ -50,6 +65,7 @@ class PuMP_MainWindow : public QMainWindow
 		QToolBar toolBar;
 		
 		void getSupportedImageFormats();
+		void setupActions();
 
 	public:
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);

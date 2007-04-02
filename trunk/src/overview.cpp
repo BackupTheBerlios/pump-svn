@@ -19,6 +19,8 @@
  * 
  */
 
+#include <assert.h>
+
 #include <QContextMenuEvent>
 #include <QDebug>
 #include <QMenu>
@@ -72,6 +74,15 @@ void PuMP_OverviewModel::addImage(
 }
 
 /**
+ * Function that clears all entries in the model.
+ */
+void PuMP_OverviewModel::clear()
+{
+	QModelIndex dummy;
+	removeRows(0, rowCount(dummy), dummy);
+}
+
+/**
  * Function that returns the data of a certain item in the model. Usually only
  * called from the view displaying the model.
  * @param	index	The index of the demanded item.
@@ -93,7 +104,7 @@ QVariant PuMP_OverviewModel::data(
 			display = fontMetrics->elidedText(
 				display,
 				Qt::ElideRight,
-				(int)(ITEM_STRETCH - 1) * THUMB_SIZE);
+				(int)((ITEM_STRETCH - 1) * THUMB_SIZE) - ICON_PADDING);
 		}
 
 		QString props = properties.value(index.row());
@@ -102,9 +113,12 @@ QVariant PuMP_OverviewModel::data(
 		return display;
 	}
 	else if(role == Qt::SizeHintRole)
-		return QSize(
+	{
+		QSize size(
 			(int)(ITEM_STRETCH * THUMB_SIZE),
 			THUMB_SIZE + ITEM_SPACING);
+		return size;
+	}
 //	else if(role == Qt::ToolTipRole)
 
 	return QVariant();
@@ -231,7 +245,7 @@ void PuMP_OverviewLoader::run()
 			+ "x"
 			+ QString::number(rSize.height())
 			+ "\n"
-			+ QString::number((double)(info.size() / 1024), 'f', 1)
+			+ QString::number(((double) info.size()) / 1024, 'f', 1)
 			+ " KB";
 
 		if(rSize.height() > size.height() || rSize.width() > size.width())
@@ -320,24 +334,10 @@ PuMP_Overview::PuMP_Overview(
 	progress = 0;
 	progressMax = 1;
 
-	openAction = new QAction("Open", this);
-	connect(
-		openAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openAction_triggered()));
-	openDirAction = new QAction("Open", this);
-	connect(
-		openDirAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openDirAction_triggered()));
-	openInNewTabAction = new QAction("Open in new tab", this);
-	connect(
-		openInNewTabAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openInNewTabAction_triggered()));
+	openAction = NULL;
+	openInNewTabAction = NULL;
+	refreshAction = NULL;
+	stopAction = NULL;
 
 	model.setParent(this);
 	model.setFontMetrics(fontMetrics());
@@ -366,12 +366,15 @@ PuMP_Overview::PuMP_Overview(
 	
 	setViewMode(QListView::ListMode);
 	setFlow(QListView::LeftToRight);
+	setFocusPolicy(Qt::StrongFocus);
 	setIconSize(QSize(THUMB_SIZE, THUMB_SIZE));
 	setLayoutMode(QListView::Batched);
 	setMinimumWidth(450);
 	setModel(&model);
 	setMovement(QListView::Static);
 	setResizeMode(QListView::Fixed);
+	setTextElideMode(Qt::ElideNone);
+	setWordWrap(true);
 	setWrapping(true);
 	setUniformItemSizes(true);
 	connect(
@@ -388,12 +391,10 @@ PuMP_Overview::PuMP_Overview(
 PuMP_Overview::~PuMP_Overview()
 {
 	delete openAction;
-	delete openDirAction;
 	delete openInNewTabAction;
 
-	stop();
-	QModelIndex dummy;
-	model.removeRows(0, model.rowCount(dummy), dummy);
+	on_stop();
+	model.clear();
 }
 
 /**
@@ -403,64 +404,97 @@ PuMP_Overview::~PuMP_Overview()
  */
 void PuMP_Overview::contextMenuEvent(QContextMenuEvent *e)
 {
+	bool show = true;
 	QModelIndex index = currentIndex();
-	if(!index.isValid()) return;
+	if(!index.isValid()) show = false;
 	
 	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
-	if(!info.exists()) return;
+	if(!info.exists()) show = false;
 	
-	bool enable = true;
-	if(info.isDir()) enable = false;
+	assert(openAction != NULL);
+	assert(openInNewTabAction != NULL);
+	assert(refreshAction != NULL);
+	assert(stopAction != NULL);
 	
-	openAction->setEnabled(enable);
-	openDirAction->setEnabled(!enable);
-	openInNewTabAction->setEnabled(enable);
+	openAction->setEnabled(show);
+	openInNewTabAction->setEnabled(!info.isDir() && show);
+	refreshAction->setEnabled(dir.exists());
 
 	QMenu menu(this);
-	menu.addAction(openDirAction);
-	menu.addSeparator();
 	menu.addAction(openAction);
 	menu.addAction(openInNewTabAction);
+	menu.addSeparator();
+	menu.addAction(refreshAction);
+	menu.addAction(stopAction);
 	menu.exec(e->globalPos());
 }
 
 /**
- * Slot-function that is called when an entry in this list-view was activated.
- * @param	index	The index of the activated item. 
+ * Function that connects the global actions for the overview with its slots.
+ * @param	refreshAction	The action to refresh the current directory.
+ * @param	stopAction	The action that stops current processings.
  */
-void PuMP_Overview::on_activated(const QModelIndex &index)
+void PuMP_Overview::setupActions(
+	QAction *refreshAction,
+	QAction *stopAction)
+{
+	assert(refreshAction != NULL);
+	assert(stopAction != NULL);
+
+	openAction = new QAction("Open", this);
+	connect(
+		openAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openAction_triggered()));
+	openInNewTabAction = new QAction("Open in new tab", this);
+	connect(
+		openInNewTabAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openInNewTabAction_triggered()));
+	this->refreshAction = refreshAction;
+	connect(
+		refreshAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_refresh()));
+	this->stopAction = stopAction;
+	connect(
+		stopAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_stop()));
+}
+
+/**
+ * Slot-function that is called when an entry in this list-view was activated.
+ * @param	index	The index of the activated item.
+ * @param	newTab	Indicates whether the file should be opened in a new tab.
+ */
+void PuMP_Overview::on_activated(const QModelIndex &index, bool newTab)
 {
 	if(!index.isValid()) return;
 	
 	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
 	if(!info.exists()) return;
 	
-	if(info.isDir()) create(info);
-	else emit viewerRequested(info, true);
+	if(info.isDir())
+	{
+		on_open(info);
+		emit dirOpened(info);
+	}
+	else emit openImage(info, newTab);
 }
 
 /**
- * Slot-function that is called when the user demanded to open a selected file.
+ * Slot-function that is called when the user demanded to open a selected file
+ * or directory.
  */
 void PuMP_Overview::on_openAction_triggered()
 {
 	QModelIndex index = currentIndex();
-	if(!index.isValid()) return;
-	
-	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
-	if(info.exists() && !info.isDir()) emit viewerRequested(info, false);
-}
-
-/**
- * Slot-function that is called when the user demanded to open a selected dir.
- */
-void PuMP_Overview::on_openDirAction_triggered()
-{
-	QModelIndex index = currentIndex();
-	if(!index.isValid()) return;
-	
-	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
-	if(info.exists() && info.isDir()) create(info);
+	on_activated(index, false);
 }
 
 /**
@@ -470,109 +504,7 @@ void PuMP_Overview::on_openDirAction_triggered()
 void PuMP_Overview::on_openInNewTabAction_triggered()
 {
 	QModelIndex index = currentIndex();
-	if(!index.isValid()) return;
-	
-	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
-	if(info.exists() && !info.isDir()) emit viewerRequested(info, true);
-}
-
-/**
- * Function that creates an overview/preview of the given directory.
- * @param	info	The QFileInfo-object representing the directory to preview.
- */
-void PuMP_Overview::create(const QFileInfo &info)
-{
-	if(!info.isDir() || !info.isAbsolute())
-	{
-		QMessageBox::information(
-			this,
-			"Information",
-			"Cannot create overview for \"" + info.fileName() + "\"");
-		return;
-	}
-
-	if(dir.path() != info.filePath())
-	{
-		stop();
-		QModelIndex dummy;
-		model.removeRows(0, model.rowCount(dummy), dummy);
-
-		dir.setPath(info.filePath());
-		dir.refresh();
-		current = dir.entryInfoList(
-			QDir::Files | QDir::AllDirs |
-			QDir::NoDotAndDotDot | QDir::Readable,
-			QDir::Name | QDir::DirsFirst);
-	
-		progress = 0;
-		progressMax = 1;
-		
-		if(!current.isEmpty())
-		{
-			progressMax = current.size();
-			QFileInfo first = current.first();
-			emit updateStatusBar(
-				progress * 100 / progressMax,
-				first.fileName());
-			
-			if(!loader.isRunning())
-			{
-				first = current.takeFirst();
-				loader.processImage(first);
-			}
-		}
-	}
-}
-
-/**
- * Function that refreshes and reloads the current directory.
- */
-void PuMP_Overview::reload()
-{
-	stop();
-	if(dir.exists())
-	{
-		QModelIndex dummy;
-		model.removeRows(0, model.rowCount(dummy), dummy);
-
-		dir.refresh();
-		current = dir.entryInfoList(
-			QDir::Files | QDir::AllDirs |
-			QDir::NoDotAndDotDot | QDir::Readable,
-			QDir::Name | QDir::DirsFirst);
-	
-		progress = 0;
-		progressMax = 1;
-
-		if(!current.isEmpty())
-		{
-			progressMax = current.size();
-			QFileInfo first = current.first();
-			emit updateStatusBar(
-				progress * 100 / progressMax,
-				first.fileName());
-			
-			if(!loader.isRunning())
-			{
-				first = current.takeFirst();
-				loader.processImage(first);
-			}
-		}
-	}
-}
-
-/**
- * Function that stops a running calcultion of a preview (e.g. if the directory
- * is too large or the user is too impatient).
- */
-void PuMP_Overview::stop()
-{
-	progress = 0;
-	progressMax = 1;
-	current.clear();
-	emit updateStatusBar(100, QString());
-
-	loader.setKilled();
+	on_activated(index, true);
 }
 
 /**
@@ -591,7 +523,11 @@ void PuMP_Overview::on_loader_finished()
 
 		loader.processImage(info);
 	}
-	else emit updateStatusBar(100, QString());
+	else
+	{
+		stopAction->setEnabled(false);
+		emit updateStatusBar(100, QString());
+	}
 }
 
 /**
@@ -626,6 +562,85 @@ void PuMP_Overview::on_loader_processedImage(
 		model.addImage(QPixmap::fromImage(image), name, properties);
 		update();
 	}
+}
+
+/**
+ * Function that creates an overview/preview of the given directory.
+ * @param	info	The QFileInfo-object representing the directory to preview.
+ */
+void PuMP_Overview::on_open(const QFileInfo &info)
+{
+	if(!info.isDir() || !info.isAbsolute())
+	{
+		QMessageBox::information(
+			this,
+			"Information",
+			"Cannot create overview for \"" + info.fileName() + "\"");
+		return;
+	}
+
+	if(dir.path() != info.filePath())
+	{
+		on_stop();
+		model.clear();
+
+		dir.setPath(info.filePath());
+		dir.refresh();
+		current = dir.entryInfoList(
+			QDir::Files | QDir::AllDirs |
+			QDir::NoDotAndDotDot | QDir::Readable,
+			QDir::Name | QDir::DirsFirst);
+	
+		progress = 0;
+		progressMax = 1;
+		
+		if(!current.isEmpty())
+		{
+			stopAction->setEnabled(true);
+			progressMax = current.size();
+			QFileInfo first = current.first();
+			emit updateStatusBar(
+				progress * 100 / progressMax,
+				first.fileName());
+			
+			if(!loader.isRunning())
+			{
+				first = current.takeFirst();
+				loader.processImage(first);
+			}
+		}
+	}
+}
+
+/**
+ * Slot-function that refreshes and reloads the current directory.
+ */
+void PuMP_Overview::on_refresh()
+{
+	on_stop();
+	if(dir.exists())
+	{
+		QFileInfo info(dir.path());
+		dir.setPath("");
+		
+		on_open(info);
+	}
+}
+
+/**
+ * Function that stops a running calcultion of a preview (e.g. if the directory
+ * is too large or the user is too impatient).
+ */
+void PuMP_Overview::on_stop()
+{
+	stopAction->setEnabled(false);
+	
+	progress = 0;
+	progressMax = 1;
+	current.clear();
+	emit updateStatusBar(100, QString());
+
+	loader.setKilled();
 }
 
 /*****************************************************************************/

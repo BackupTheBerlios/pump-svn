@@ -19,7 +19,11 @@
  * 
  */
 
+#include <assert.h>
+
+#include <QContextMenuEvent>
 #include <QDebug>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -187,6 +191,15 @@ PuMP_DisplayView::PuMP_DisplayView(const QFileInfo &info, QWidget *parent)
 		SLOT(on_display_loadingError()));
 	setImage(info);
 
+	mirrorHAction = NULL;
+	mirrorVAction = NULL;
+	rotateCWAction = NULL;
+	rotateCCWAction = NULL;
+	sizeOriginalAction = NULL;
+	sizeFittedAction = NULL;
+	zoomInAction = NULL;
+	zoomOutAction = NULL;
+
 	horizontalScrollBar()->setMinimum(0);
 	verticalScrollBar()->setMinimum(0);
 	
@@ -195,6 +208,39 @@ PuMP_DisplayView::PuMP_DisplayView(const QFileInfo &info, QWidget *parent)
 	setCursor(Qt::OpenHandCursor);
 	setMouseTracking(false);
 	setWidget(&display);
+}
+
+/**
+ * Overloaded function for context-menu-events. It provides a custom menu for
+ * the this image.
+ * @param	e The context-menu-event. 
+ */
+void PuMP_DisplayView::contextMenuEvent(QContextMenuEvent *event)
+{
+	if(!display.displayed.isNull())
+	{
+		assert(mirrorHAction != NULL);
+		assert(mirrorVAction != NULL);
+		assert(rotateCWAction != NULL);
+		assert(rotateCCWAction != NULL);
+		assert(sizeOriginalAction != NULL);
+		assert(sizeFittedAction != NULL);
+		assert(zoomInAction != NULL);
+		assert(zoomOutAction != NULL);
+	
+		QMenu menu(this);
+		menu.addAction(mirrorHAction);
+		menu.addAction(mirrorVAction);
+		menu.addAction(rotateCWAction);
+		menu.addAction(rotateCCWAction);
+		menu.addSeparator();
+		menu.addAction(sizeOriginalAction);
+		menu.addAction(sizeFittedAction);
+		menu.addAction(zoomInAction);
+		menu.addAction(zoomOutAction);
+		menu.exec(event->globalPos());
+	}
+	else event->ignore();
 }
 
 /**
@@ -309,6 +355,46 @@ void PuMP_DisplayView::setImage(const QFileInfo &info)
 {
 	this->info = info;
 	display.loader.load(this->info);
+}
+
+/**
+ * Function that connects the global actions for the display with its slots.
+ * @param	mirrorHAction	The action that mirrors the image horizontally.
+ * @param	mirrorVAction	The action that mirrors the image vertically.
+ * @param	rotateCWAction	The action that rotates the image clockwise.
+ * @param	rotateCCWAction	The action that rotates the image counter-clockwise.
+ * @param	sizeOriginalAction	The action that sets the image to original size.
+ * @param	sizeFittedAction	The action that fits the image to window-size.
+ * @param	zoomInAction	The action that zooms into the image.
+ * @param	zoomOutAction	The action that zooms out of the image.
+ */
+void PuMP_DisplayView::setupActions(
+	QAction *mirrorHAction,
+	QAction *mirrorVAction,
+	QAction *rotateCWAction,
+	QAction *rotateCCWAction,
+	QAction *sizeOriginalAction,
+	QAction *sizeFittedAction,
+	QAction *zoomInAction,
+	QAction *zoomOutAction)
+{
+	assert(mirrorHAction != NULL);
+	assert(mirrorVAction != NULL);
+	assert(rotateCWAction != NULL);
+	assert(rotateCCWAction != NULL);
+	assert(sizeOriginalAction != NULL);
+	assert(sizeFittedAction != NULL);
+	assert(zoomInAction != NULL);
+	assert(zoomOutAction != NULL);
+
+	this->mirrorHAction = mirrorHAction;
+	this->mirrorVAction = mirrorVAction;
+	this->rotateCWAction = rotateCWAction;
+	this->rotateCCWAction = rotateCCWAction;
+	this->sizeOriginalAction = sizeOriginalAction;
+	this->sizeFittedAction = sizeFittedAction;
+	this->zoomInAction = zoomInAction;
+	this->zoomOutAction = zoomOutAction;
 }
 
 /**
