@@ -263,7 +263,7 @@ void PuMP_OverviewLoader::run()
 		
 		if(!reader.canRead())
 		{
-			emit imageIsNull(info);
+			emit imageIsNull(info.fileName());
 			return;
 		}
 
@@ -274,7 +274,7 @@ void PuMP_OverviewLoader::run()
 	rName = info.fileName();
 	if(result.isNull())
 	{
-		emit imageIsNull(info);
+		emit imageIsNull(info.fileName());
 		return;
 	}
 	
@@ -345,9 +345,9 @@ PuMP_Overview::PuMP_Overview(
 	connect(&loader, SIGNAL(finished()), this, SLOT(on_loader_finished()));
 	connect(
 		&loader,
-		SIGNAL(imageIsNull(const QFileInfo &)),
+		SIGNAL(imageIsNull(const QString &)),
 		this,
-		SLOT(on_loader_imageIsNull(const QFileInfo &)));
+		SLOT(on_loader_imageIsNull(const QString &)));
 	connect(
 		&loader,
 		SIGNAL(processedImage(
@@ -535,12 +535,12 @@ void PuMP_Overview::on_loader_finished()
  * loaded or scaled.
  * @param	info	The file that failed to load/scale.
  */
-void PuMP_Overview::on_loader_imageIsNull(const QFileInfo &info)
+void PuMP_Overview::on_loader_imageIsNull(const QString &fileName)
 {
 	QMessageBox::information(
 		this,
 		"Information",
-		"Cannot create thumbnail for entry \"" + info.fileName() + "\"");
+		"Cannot create thumbnail for entry \"" + fileName + "\"");
 }
 
 /**

@@ -102,7 +102,7 @@ class PuMP_OverviewLoader : public QThread
 		bool wasKilled();
 	
 	signals:
-		void imageIsNull(const QFileInfo &info);
+		void imageIsNull(const QString &fileName);
 		void processedImage(
 			const QString &name,
 			const QString &properties,
@@ -149,7 +149,7 @@ class PuMP_Overview : public QListView
 		
 	public slots:
 		void on_loader_finished();
-		void on_loader_imageIsNull(const QFileInfo &info);
+		void on_loader_imageIsNull(const QString &fileName);
 		void on_loader_processedImage(
 			const QString &name,
 			const QString &properties,

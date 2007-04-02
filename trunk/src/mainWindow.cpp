@@ -19,6 +19,7 @@
  * 
  */
 
+#include "configDialog.hh"
 #include "directoryView.hh"
 #include "imageView.hh"
 #include "mainWindow.hh"
@@ -27,9 +28,11 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QImageWriter>
 #include <QList>
+#include <QMenuBar>
 #include <QStatusBar>
 #include <QString>
 #include <QToolBar>
@@ -111,6 +114,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	addToolBar(&toolBar);
 
 	// setup menubar
+	menuBar()->addMenu("&File");
+	menuBar()->addMenu("&Edit");
+	menuBar()->addMenu("&View");
+	menuBar()->addMenu("&Help");
 
 	// setup statusbar
 	progressBar.setMinimum(0);
@@ -126,6 +133,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
 	resize(QSize(640, 480));
+	
+	// test
+	configDialog dialog(this);
+	dialog.exec();
 }
 
 /**
