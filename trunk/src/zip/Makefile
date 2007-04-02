@@ -1,14 +1,20 @@
 CC=gcc
 AR=ar
 
+#ifdef WIN32
+	INCLUDES=-I..\zlib\
+	IO=iowin32.c
+	IO_OUT=iowin32.o
+#else
+	INCLUDES=-I../zlib/
+	IO=ioapi.c
+	IO_OUT=ioapi.o
+#endif
 
 all:
-	@echo "Ich hab keine Ahnung, wie man dumme Windows-Makefiles baut und kann's nicht testen."
-	@echo "Das muss hier aber irgendwann noch rein, weil wir ne DLL brauchen, die die für zip nötigen Funktionen mitbringt."
-
-	gcc -c ioapi.c
-	gcc -c zip.c
-	ar rcs libzip.a ioapi.o zip.o
+	gcc $(INCLUDES) -c $(IO)
+	gcc $(INCLUDES) -c zip.c
+	ar rcs libzip.a $(IO_OUT) zip.o
 
 clean:
 	rm *.o *.a

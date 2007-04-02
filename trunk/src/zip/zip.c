@@ -17,6 +17,12 @@
 #include "zlib.h"
 #include "zip.h"
 
+#ifdef WIN32
+	#include "iowin32.h"
+#else
+	#include "ioapi.h"
+#endif
+
 #ifdef STDC
 #  include <stddef.h>
 #  include <string.h>
@@ -508,7 +514,11 @@ extern zipFile ZEXPORT zipOpen2 (pathname, append, globalcomment, pzlib_filefunc
 
 
     if (pzlib_filefunc_def==NULL)
-        fill_fopen_filefunc(&ziinit.z_filefunc);
+        #ifdef WIN32
+        	fill_win32_filefunc(&ziinit.z_filefunc);
+        #else
+        	fill_fopen_filefunc(&ziinit.z_filefunc);
+        #endif
     else
         ziinit.z_filefunc = *pzlib_filefunc_def;
 
