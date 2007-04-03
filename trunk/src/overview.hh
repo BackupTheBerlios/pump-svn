@@ -31,6 +31,7 @@
 #include <QImageReader>
 #include <QList>
 #include <QListView>
+#include <QPainter>
 #include <QPixmap>
 #include <QStringList>
 #include <QThread>
@@ -85,6 +86,7 @@ class PuMP_OverviewLoader : public QThread
 		bool killed;
 		QFileInfo info;
 		QImageReader reader;
+		QPainter painter;
 		QSize size;
 		
 		void run();

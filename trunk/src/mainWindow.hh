@@ -44,8 +44,13 @@ class PuMP_MainWindow : public QMainWindow
 		PuMP_DirectoryView *directoryView;
 		PuMP_ImageView *imageView;
 		
+		QAction *aboutAction;
+		QAction *aboutQtAction;
 		QAction *addAction;
 		QAction *closeAction;
+		QAction *exitAction;
+		QAction *forceExitAction;
+		QAction *homeAction;
 		QAction *mirrorHAction;
 		QAction *mirrorVAction;
 		QAction *nextAction;
@@ -71,7 +76,9 @@ class PuMP_MainWindow : public QMainWindow
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
 		~PuMP_MainWindow();
 
-	public slots:		
+	public slots:
+		void on_about();
+		void on_forceExit();
 		void on_statusBarUpdate(int value, const QString &text);
 };
 

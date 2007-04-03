@@ -81,6 +81,7 @@ class PuMP_ImageView : public QTabWidget
 	public slots:
 		void on_addAction_triggered();
 		void on_closeAction_triggered();
+		void on_currentChanged(int index); 
 		void on_displayView_loadingError(PuMP_DisplayView *view = NULL);
 		void on_mirrorHAction();
 		void on_mirrorVAction();

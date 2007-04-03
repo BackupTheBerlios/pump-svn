@@ -25,10 +25,13 @@
 #include <QAction>
 #include <QFileInfo>
 #include <QImage>
+#include <QMatrix>
 #include <QPixmap>
 #include <QScrollArea>
 #include <QThread>
 #include <QWidget>
+
+#define MAX_ZOOM_STEPS 4
 
 /*****************************************************************************/
 
@@ -59,19 +62,29 @@ class PuMP_Display : public QWidget
 	Q_OBJECT
 	
 	protected:
+		QAction *sizeOriginalAction;
+		QAction *sizeFittedAction;
+
 		void mousePressEvent(QMouseEvent *event);
 		void paintEvent(QPaintEvent *event);
 	
 	public:
+		bool mirroredHorizontal;
+		bool mirroredVertical;
+		int rotation;
 		bool scaled;
+		bool sizeOriginal;
+		int zoom;
+		
+		PuMP_DisplayLoader loader;
 
 		QImage image;
+		QMatrix matrix;
 		QPixmap displayed;
-
-		PuMP_DisplayLoader loader;
 
 		PuMP_Display(const QFileInfo &info = QFileInfo(), QWidget *parent = 0);
 
+		void setupActions(QAction *sizeOriginalAction, QAction *sizeFittedAction);
 		QSize sizeHint() const;
 	
 	public slots:
@@ -89,8 +102,6 @@ class PuMP_DisplayView : public QScrollArea
 	Q_OBJECT
 
 	protected:
-		PuMP_Display display;
-
 		QAction *mirrorHAction;
 		QAction *mirrorVAction;
 		QAction *rotateCWAction;
@@ -110,13 +121,12 @@ class PuMP_DisplayView : public QScrollArea
 		void moveBy(int x, int y);
 
 	public:
-		PuMP_DisplayView(const QFileInfo &info, QWidget *parent = 0);
+		PuMP_Display display;
 
+		PuMP_DisplayView(const QFileInfo &info, QWidget *parent = 0);
+		
 		QString fileName() const;
 		QString filePath() const;
-
-		void mirror(bool horizontal = false);
-		void rotate(bool clockwise = true);
 
 		void setImage(const QFileInfo &info);
 		void setupActions(
@@ -128,9 +138,6 @@ class PuMP_DisplayView : public QScrollArea
 			QAction *sizeFittedAction,
 			QAction *zoomInAction,
 			QAction *zoomOutAction);
-
-		void zoomIn();
-		void zoomOut();
 
 	public slots:
 		void on_display_loadingError();

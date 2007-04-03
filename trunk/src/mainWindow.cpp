@@ -26,6 +26,7 @@
 
 #include <assert.h>
 
+#include <QApplication>
 #include <QByteArray>
 #include <QDebug>
 #include <QFileInfo>
@@ -93,8 +94,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.setMovable(false);
 	toolBar.setAllowedAreas(Qt::TopToolBarArea);
 	toolBar.setToolButtonStyle(Qt::ToolButtonIconOnly);
+	toolBar.insertAction(NULL, homeAction);
 	toolBar.insertAction(NULL, previousAction);
 	toolBar.insertAction(NULL, nextAction);
+	toolBar.addSeparator();
 	toolBar.insertAction(NULL, refreshAction);
 	toolBar.insertAction(NULL, stopAction);
 	toolBar.addSeparator();
@@ -114,10 +117,36 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	addToolBar(&toolBar);
 
 	// setup menubar
-	menuBar()->addMenu("&File");
-	menuBar()->addMenu("&Edit");
-	menuBar()->addMenu("&View");
-	menuBar()->addMenu("&Help");
+	QMenu *menu = NULL;
+	menu = menuBar()->addMenu("&File");
+	menu->insertAction(NULL, addAction);
+	menu->insertAction(NULL, closeAction);
+	menu->addSeparator();
+	menu->insertAction(NULL, forceExitAction);
+	menu->insertAction(NULL, exitAction);
+	menu = menuBar()->addMenu("&Edit");
+//	menu->insertAction(NULL, exportAction);
+//	menu->insertAction(NULL, preferenceAction);
+	menu = menuBar()->addMenu("&View");
+	menu->insertAction(NULL, mirrorHAction);
+	menu->insertAction(NULL, mirrorVAction);
+	menu->insertAction(NULL, rotateCCWAction);
+	menu->insertAction(NULL, rotateCWAction);
+	menu->addSeparator();
+	menu->insertAction(NULL, sizeOriginalAction);
+	menu->insertAction(NULL, sizeFittedAction);
+	menu->insertAction(NULL, zoomInAction);
+	menu->insertAction(NULL, zoomOutAction);
+	menu->addSeparator();
+	menu->insertAction(NULL, refreshAction);
+	menu->insertAction(NULL, stopAction);
+	menu = menuBar()->addMenu("&Go");
+	menu->insertAction(NULL, previousAction);
+	menu->insertAction(NULL, nextAction);
+	menu->insertAction(NULL, homeAction);
+	menu = menuBar()->addMenu("&Help");
+	menu->insertAction(NULL, aboutQtAction);
+	menu->insertAction(NULL, aboutAction);
 
 	// setup statusbar
 	progressBar.setMinimum(0);
@@ -134,9 +163,9 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	setWindowTitle("PuMP - Publish My Pictures");
 	resize(QSize(640, 480));
 	
-	// test
-	configDialog dialog(this);
-	dialog.exec();
+//	// test
+//	configDialog dialog(this);
+//	dialog.exec();
 }
 
 /**
@@ -147,8 +176,13 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete directoryView;
 	delete imageView;
 
+	delete aboutAction;
+	delete aboutQtAction;
 	delete addAction;
 	delete closeAction;
+	delete exitAction;
+	delete forceExitAction;
+	delete homeAction;
 	delete mirrorHAction;
 	delete mirrorVAction;
 	delete nextAction;
@@ -188,23 +222,45 @@ void PuMP_MainWindow::getSupportedImageFormats()
  */
 void PuMP_MainWindow::setupActions()
 {
+	aboutAction = new QAction(/*QIcon(), */"About", this);
+	aboutAction->setToolTip("Show information about PuMP.");
+	connect(aboutAction, SIGNAL(triggered()), this, SLOT(on_about()));
+	
+	aboutQtAction = new QAction(/*QIcon(), */"About Qt", this);
+	aboutAction->setToolTip("Show information about Qt.");
+	connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+
 	addAction = new QAction(QIcon(":/tab_new.png"), "Add new tab", this);
 	addAction->setToolTip("Add a new tab.");
 	
 	closeAction = new QAction(QIcon(":/tab_remove.png"), "Close tab", this);
 	closeAction->setToolTip("Close the current tab.");
+	closeAction->setEnabled(false);
+
+	exitAction = new QAction("Exit", this);
+	exitAction->setToolTip("Close and exit PuMP.");
+	connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
+	
+	forceExitAction = new QAction("Quit", this);
+	forceExitAction->setToolTip("Exit PuMP ungracefully.");
+	connect(forceExitAction, SIGNAL(triggered()), this, SLOT(on_forceExit()));
+
+	homeAction = new QAction(QIcon(":/gohome.png"), "Home", this);
+	homeAction->setToolTip("Got to the home directory");
 
 	mirrorHAction = new QAction(
 		QIcon(":/hmirror.png"),
 		"Mirror image horizontally",
 		this);
 	mirrorHAction->setToolTip("Mirror the current image horizontally.");
+	mirrorHAction->setEnabled(false);
 
 	mirrorVAction = new QAction(
 		QIcon(":/vmirror.png"),
 		"Mirror image vertically",
 		this);
 	mirrorVAction->setToolTip("Mirror the current image vertically.");
+	mirrorVAction->setEnabled(false);
 
 	nextAction = new QAction(QIcon(":/forward.png"), "Next directory", this);
 	nextAction->setToolTip("Got to the next directory.");
@@ -223,33 +279,40 @@ void PuMP_MainWindow::setupActions()
 		"Rotate image counter-clockwise",
 		this);
 	rotateCCWAction->setToolTip("Rotate the current image counter-clockwise.");
+	rotateCCWAction->setEnabled(false);
 
 	rotateCWAction = new QAction(
 		QIcon(":/rotate_cw.png"),
 		"Rotate image clockwise",
 		this);
 	rotateCWAction->setToolTip("Rotate the current image clockwise.");
+	rotateCWAction->setEnabled(false);
 
 	sizeOriginalAction = new QAction(
 		QIcon(":/viewmag1.png"),
 		"Display image in original size",
 		this);
 	sizeOriginalAction->setToolTip("Display the current image in original size.");
+	sizeOriginalAction->setEnabled(false);
 
 	sizeFittedAction = new QAction(
 		QIcon(":/viewmagfit.png"),
 		"Display image fitted to window",
 		this);
 	sizeFittedAction->setToolTip("Display the current image fitted to window.");
+	sizeFittedAction->setEnabled(false);
 
 	stopAction = new QAction(QIcon(":/stop.png"), "Stop refresh", this);
 	stopAction->setToolTip("Stop refreshing the current directory.");
+	stopAction->setEnabled(false);
 
 	zoomInAction = new QAction(QIcon(":/viewmag+.png"), "Zoom in", this);
 	zoomInAction->setToolTip("Zoom in current image.");
+	zoomInAction->setEnabled(false);
 
 	zoomOutAction = new QAction(QIcon(":/viewmag-.png"), "Zoom out", this);
 	zoomOutAction->setToolTip("Zoom out current image.");
+	zoomOutAction->setEnabled(false);
 	
 	assert(directoryView != NULL);
 	assert(imageView != NULL);
@@ -267,6 +330,22 @@ void PuMP_MainWindow::setupActions()
 		stopAction,
 		zoomInAction,
 		zoomOutAction);
+}
+
+/**
+ * Function that shows PuMP's about-dialog.
+ */
+void PuMP_MainWindow::on_about()
+{
+	
+}
+
+/**
+ * Function that forces PuMP to exit immediatelly.
+ */
+void PuMP_MainWindow::on_forceExit()
+{
+	exit(0);
 }
 
 /**

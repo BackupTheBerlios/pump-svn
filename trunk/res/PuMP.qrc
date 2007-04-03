@@ -1,10 +1,15 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
+	<file>./about.png</file>
 	<file>./add.png</file>
+	<file>./advancedConfiguration.png</file>
 	<file>./back.png</file>
+	<file>./basicConfiguration.png</file>
+	<file>./export.png</file>
 	<file>./folder64.png</file>
     <file>./folder128.png</file>
     <file>./forward.png</file>
+   	<file>./gohome.png</file>
 	<file>./hmirror.png</file>
 	<file>./vmirror.png</file>
 	<file>./reload.png</file>
@@ -18,9 +23,5 @@
 	<file>./viewmag-.png</file>
 	<file>./viewmag1.png</file>
 	<file>./viewmagfit.png</file>
-	<file>./basicConfiguration.png</file>
-	<file>./advancedConfiguration.png</file>
-	<file>./export.png</file>
-	<file>./about.png</file>
 </qresource>
 </RCC>

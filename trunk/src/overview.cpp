@@ -278,6 +278,22 @@ void PuMP_OverviewLoader::run()
 		return;
 	}
 	
+	if(result.width() < THUMB_SIZE || result.height() < THUMB_SIZE)
+	{
+		QImage master(THUMB_SIZE, THUMB_SIZE, QImage::Format_ARGB32);
+		painter.begin(&master);
+		painter.fillRect(0, 0, THUMB_SIZE, THUMB_SIZE, QBrush(Qt::white));
+		painter.drawImage(
+			QPoint((THUMB_SIZE - result.width()) / 2,
+				(THUMB_SIZE - result.height()) / 2),
+			result);
+		painter.setPen(QPen(QBrush(Qt::lightGray), 1));
+		painter.drawRect(0, 0, THUMB_SIZE - 1, THUMB_SIZE - 1);
+		painter.end();
+
+		result = master;
+	}
+	
 	emit processedImage(rName, rProperties, result, killed);
 }
 
@@ -525,6 +541,7 @@ void PuMP_Overview::on_loader_finished()
 	}
 	else
 	{
+		refreshAction->setEnabled(true);
 		stopAction->setEnabled(false);
 		emit updateStatusBar(100, QString());
 	}
@@ -596,6 +613,7 @@ void PuMP_Overview::on_open(const QFileInfo &info)
 		
 		if(!current.isEmpty())
 		{
+			refreshAction->setEnabled(false);
 			stopAction->setEnabled(true);
 			progressMax = current.size();
 			QFileInfo first = current.first();

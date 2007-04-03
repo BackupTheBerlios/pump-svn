@@ -78,7 +78,15 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 	resize(200, 200);
 	setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 
+	mirroredHorizontal = false;
+	mirroredVertical = false;
+	rotation = 0;
 	scaled = false;
+	sizeOriginal = true;
+	zoom = 0;
+	
+	sizeOriginalAction = NULL;
+	sizeFittedAction = NULL;
 
 	loader.setParent(this);
 	connect(
@@ -102,18 +110,11 @@ void PuMP_Display::mousePressEvent(QMouseEvent *event)
 {
 	if(event->buttons() == Qt::MidButton)
 	{
-		scaled = !scaled;
-		if((image.width() > parentWidget()->width() ||
-			image.height() > parentWidget()->height()) &&
-			scaled)
-		{
-			displayed = QPixmap::fromImage(
-				image.scaled(
-					parentWidget()->size(),
-					Qt::KeepAspectRatio,
-					Qt::SmoothTransformation));
-		}
-		else displayed = QPixmap::fromImage(image);
+		assert(sizeOriginalAction != NULL);
+		assert(sizeFittedAction != NULL);
+
+		if(!scaled) sizeFittedAction->trigger();
+		else sizeOriginalAction->trigger();;
 
 		adjustSize();
 	}
@@ -130,6 +131,22 @@ void PuMP_Display::paintEvent(QPaintEvent *event)
 	QPainter painter(this);
 	painter.setClipRegion(event->region());
 	painter.drawPixmap(event->rect(), displayed, event->rect());
+}
+
+/**
+ * Function that connects the global actions for the display with its slots.
+ * @param	sizeOriginalAction	The action that sets the image to original size.
+ * @param	sizeFittedAction	The action that fits the image to window-size.
+ */
+void PuMP_Display::setupActions(
+	QAction *sizeOriginalAction,
+	QAction *sizeFittedAction)
+{
+	assert(sizeOriginalAction != NULL);
+	assert(sizeFittedAction != NULL);
+
+	this->sizeOriginalAction = sizeOriginalAction;
+	this->sizeFittedAction = sizeFittedAction;
 }
 
 /**
@@ -324,30 +341,6 @@ QString PuMP_DisplayView::filePath() const
 }
 
 /**
- * Function that mirrors the display's image horizontal or vertical.
- * @param	horizontal	Flag whether the image is mirrored horizontal or not.
- */
-void PuMP_DisplayView::mirror(bool horizontal)
-{
-	Q_UNUSED(horizontal);
-
-	qDebug() << "Unimplemented!";
-	display.update();
-}
-
-/**
- * Function that rotates the image according to the given flag by 90 degrees.
- * @param	clockwise	Flag indicating the direction of the rotation.	
- */
-void PuMP_DisplayView::rotate(bool clockwise)
-{
-	Q_UNUSED(clockwise);
-
-	qDebug() << "Unimplemented!";
-	display.update();
-}
-
-/**
  * Function to set the image displayed by this view.
  * @param	info	The QFileInfo-Object representing the image to show.
  */
@@ -395,24 +388,8 @@ void PuMP_DisplayView::setupActions(
 	this->sizeFittedAction = sizeFittedAction;
 	this->zoomInAction = zoomInAction;
 	this->zoomOutAction = zoomOutAction;
-}
 
-/**
- * Function that in-zooms the image by 20 percent.
- */
-void PuMP_DisplayView::zoomIn()
-{
-	qDebug() << "Unimplemented!";
-	display.update();
-}
-
-/**
- * Function that out-zooms the image by 20 percent.
- */
-void PuMP_DisplayView::zoomOut()
-{
-	qDebug() << "Unimplemented!";
-	display.update();
+	display.setupActions(sizeOriginalAction, sizeFittedAction);
 }
 
 /**

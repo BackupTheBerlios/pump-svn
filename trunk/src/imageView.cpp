@@ -20,6 +20,7 @@
  */
 
 #include <assert.h>
+#include <math.h>
 
 #include <QContextMenuEvent>
 #include <QDebug>
@@ -59,6 +60,12 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
 		this,
 		SLOT(on_updateStatusBar(int, const QString &)));
 	addTab(overview, "Overview");
+	
+	connect(
+		this,
+		SIGNAL(currentChanged(int)),
+		this,
+		SLOT(on_currentChanged(int)));
 
 	addAction = NULL;
 	closeAction = NULL;
@@ -261,6 +268,50 @@ void PuMP_ImageView::on_closeAction_triggered()
 }
 
 /**
+ * Slot-function that is called, when the current tabs changed. It sets up the
+ * actions states for the new current tab.
+ */
+void PuMP_ImageView::on_currentChanged(int index)
+{
+	QWidget *cw = widget(index);
+	if(cw == NULL || tabs.size() == 0 || cw == overview)
+	{
+		bool enable = (tabs.size() != 0);
+		addAction->setEnabled(true);
+		closeAction->setEnabled(false);
+		closeAllAction->setEnabled(enable);
+		closeOthersAction->setEnabled(enable);
+		mirrorHAction->setEnabled(false);
+		mirrorVAction->setEnabled(false);
+		rotateCWAction->setEnabled(false);
+		rotateCCWAction->setEnabled(false);
+		sizeOriginalAction->setEnabled(false);
+		sizeFittedAction->setEnabled(false);
+		zoomInAction->setEnabled(false);
+		zoomOutAction->setEnabled(false);
+	}
+	else
+	{
+		bool enable = (tabs.size() != 1);
+		PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+		
+		addAction->setEnabled(true);
+		closeAction->setEnabled(true);
+		closeAllAction->setEnabled(true);
+		closeOthersAction->setEnabled(enable);
+		mirrorHAction->setEnabled(true);
+		mirrorVAction->setEnabled(true);
+		rotateCWAction->setEnabled(true);
+		rotateCCWAction->setEnabled(true);
+		sizeOriginalAction->setEnabled(view->display.scaled);
+		sizeFittedAction->setEnabled(!view->display.scaled);
+		zoomInAction->setEnabled((view->display.zoom != MAX_ZOOM_STEPS));
+		zoomOutAction->setEnabled(
+			(view->display.zoom != (-1) * MAX_ZOOM_STEPS));
+	}
+}
+
+/**
  * Slot-function that is called when an display-view failed to load its image.
  * @param	view	A pointer to the display-view that failed.
  */
@@ -296,7 +347,12 @@ void PuMP_ImageView::on_mirrorHAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
-	((PuMP_DisplayView *) cw)->mirror(true);
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	view->display.displayed = QPixmap::fromImage(
+		view->display.displayed.toImage().mirrored(true, false));
+	view->display.mirroredHorizontal = !view->display.mirroredHorizontal;
+	view->display.adjustSize(); 
+	view->display.update();
 }
 
 /**
@@ -307,7 +363,12 @@ void PuMP_ImageView::on_mirrorVAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
-	((PuMP_DisplayView *) cw)->mirror(false);
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	view->display.displayed = QPixmap::fromImage(
+		view->display.displayed.toImage().mirrored());
+	view->display.mirroredVertical = !view->display.mirroredVertical;
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -408,7 +469,17 @@ void PuMP_ImageView::on_rotateCWAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
-	((PuMP_DisplayView *) cw)->rotate(true);
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+
+	QMatrix matrix;
+	matrix.rotate(90);
+	
+	view->display.displayed = QPixmap::fromImage(
+		view->display.displayed.toImage().transformed(
+		matrix, Qt::SmoothTransformation));
+	view->display.rotation = (view->display.rotation + 90) % 360;
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -419,8 +490,18 @@ void PuMP_ImageView::on_rotateCCWAction()
 {
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+
+	QMatrix matrix;
+	matrix.rotate(-90);
 	
-	((PuMP_DisplayView *) cw)->rotate(false);
+	view->display.displayed = QPixmap::fromImage(
+		view->display.displayed.toImage().transformed(
+		matrix, Qt::SmoothTransformation));
+	view->display.rotation = (view->display.rotation - 90) % 360;
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -428,7 +509,27 @@ void PuMP_ImageView::on_rotateCCWAction()
  */
 void PuMP_ImageView::on_sizeOriginalAction()
 {
-	
+	QWidget *cw = currentWidget();
+	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+
+	sizeOriginalAction->setEnabled(false);
+	sizeFittedAction->setEnabled(true);
+
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+
+	QImage temp = view->display.image.mirrored(
+		view->display.mirroredHorizontal,
+		view->display.mirroredVertical);
+
+	QMatrix matrix;
+	matrix.rotate(view->display.rotation);
+	temp = temp.transformed(matrix, Qt::SmoothTransformation);
+
+	view->display.displayed = QPixmap::fromImage(temp);
+	view->display.zoom = 0;
+	view->display.scaled = false;
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -436,7 +537,39 @@ void PuMP_ImageView::on_sizeOriginalAction()
  */
 void PuMP_ImageView::on_sizeFittedAction()
 {
+	QWidget *cw = currentWidget();
+	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+
+	sizeOriginalAction->setEnabled(true);
+	sizeFittedAction->setEnabled(false);
+
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+
+	QImage temp = view->display.image.scaled(
+		view->size(),
+		Qt::KeepAspectRatio,
+		Qt::SmoothTransformation);
+					
+	temp = temp.mirrored(
+		view->display.mirroredHorizontal,
+		view->display.mirroredVertical);
+
+	QMatrix matrix;
+	matrix.rotate(view->display.rotation);
+	temp = temp.transformed(matrix, Qt::SmoothTransformation);
 	
+	double factor = ((double) temp.width()) / view->display.image.width();
+	factor = (log(factor) / log(2));
+	view->display.zoom = (int) factor;
+	view->display.scaled = true;
+	
+	zoomInAction->setEnabled(true);
+	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
+		zoomOutAction->setEnabled(false);
+
+	view->display.displayed = QPixmap::fromImage(temp);
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -447,7 +580,24 @@ void PuMP_ImageView::on_zoomInAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
-	((PuMP_DisplayView *) cw)->zoomIn();
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	if(view->display.zoom == MAX_ZOOM_STEPS) return;
+	
+	view->display.zoom += 1;
+	double factor = pow(2, view->display.zoom);
+	
+	QMatrix matrix;
+	matrix.scale(factor, factor);
+
+	zoomOutAction->setEnabled(true);
+	if(view->display.zoom == MAX_ZOOM_STEPS)
+		zoomInAction->setEnabled(false);
+	
+	view->display.displayed = QPixmap::fromImage(
+		view->display.image.transformed(matrix,
+		Qt::SmoothTransformation));
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
@@ -458,7 +608,24 @@ void PuMP_ImageView::on_zoomOutAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
-	((PuMP_DisplayView *) cw)->zoomOut();
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS) return;
+	
+	view->display.zoom -= 1;
+	double factor = pow(2, view->display.zoom);
+	
+	QMatrix matrix;
+	matrix.scale(factor, factor);
+
+	zoomInAction->setEnabled(true);
+	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
+		zoomOutAction->setEnabled(false);
+	
+	view->display.displayed = QPixmap::fromImage(
+		view->display.image.transformed(matrix,
+		Qt::SmoothTransformation));
+	view->display.adjustSize();
+	view->display.update();
 }
 
 /**
