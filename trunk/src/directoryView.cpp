@@ -56,7 +56,7 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 	model.setParent(this);
 	model.setSorting(QDir::Name | QDir::DirsFirst);
 	
-	setColumnWidth(0, 130);
+	resizeColumnToContents(0);
 	setMaximumWidth(200);
 	setMinimumWidth(140);
 	setModel(&model);
@@ -92,6 +92,17 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 		SIGNAL(clicked(const QModelIndex &)),
 		this,
 		SLOT(on_clicked(const QModelIndex &)));
+	connect(
+		this,
+		SIGNAL(collapsed(const QModelIndex &)),
+		this,
+		SLOT(on_collapsedOrExpanded(const QModelIndex &)));
+	connect(
+		this,
+		SIGNAL(expanded(const QModelIndex &)),
+		this,
+		SLOT(on_collapsedOrExpanded(const QModelIndex &)));
+
 }
 
 /**
@@ -156,6 +167,17 @@ void PuMP_DirectoryView::on_clicked(const QModelIndex &index)
 		PuMP_Overview::openAction->setData(info.filePath());
 		PuMP_Overview::openAction->trigger();
 	}
+}
+
+/**
+ * Slot-function that resizes the first column of the model to its contents
+ * when it was expanded or collapsed.
+ * @param	index	Variable is unused.
+ */
+void PuMP_DirectoryView::on_collapsedOrExpanded(const QModelIndex &index)
+{
+	Q_UNUSED(index);
+	resizeColumnToContents(0);
 }
 
 /**

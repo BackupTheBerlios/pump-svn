@@ -179,7 +179,8 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	// main window
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
-	resize(QSize(640, 480));
+	//resize(QSize(640, 480));
+	adjustSize();
 }
 
 /**
@@ -325,12 +326,14 @@ void PuMP_MainWindow::setupActions()
 		"Next Image",
 		this);
 	PuMP_MainWindow::nextAction->setToolTip("Got to the next image.");
+	PuMP_MainWindow::nextAction->setEnabled(false);
 
 	PuMP_MainWindow::previousAction = new QAction(
 		QIcon(":/previous.png"),
 		"Previous image",
 		this);
 	PuMP_MainWindow::previousAction->setToolTip("Go to the previous image.");
+	PuMP_MainWindow::previousAction->setEnabled(false);
 
 	PuMP_MainWindow::refreshAction = new QAction(
 		QIcon(":/reload.png"),
@@ -391,7 +394,7 @@ void PuMP_MainWindow::setupActions()
 		"Zoom out",
 		this);
 	PuMP_MainWindow::zoomOutAction->setToolTip("Zoom out current image.");
-	PuMP_MainWindow::zoomOutAction->setEnabled(false);	
+	PuMP_MainWindow::zoomOutAction->setEnabled(false);
 }
 
 /**

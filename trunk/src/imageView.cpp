@@ -178,6 +178,45 @@ void PuMP_ImageView::contextMenuEvent(QContextMenuEvent *e)
 }
 
 /**
+ * Function that zooms the given display's image to the given step.
+ * @param	view	The display to zoom.
+ * @param	step	The zoom-step.
+ */
+void PuMP_ImageView::zoom(PuMP_DisplayView *view, int step)
+{
+	if(view == NULL ||
+		step > MAX_ZOOM_STEPS ||
+		step < 0 ||
+		view->display.zoom == step) return;
+	
+	QImage temp = view->display.image.mirrored(
+		view->display.mirroredHorizontal,
+		view->display.mirroredVertical);
+
+	QMatrix matrix;
+	matrix.rotate(view->display.rotation);
+	temp = temp.transformed(matrix, Qt::SmoothTransformation);
+
+	view->display.zoom = step;
+	double factor = view->display.zoom - DEFAULT_ZOOM;
+	if(factor < 0) factor /= (int)(MAX_ZOOM_STEPS / 2) + 1;
+	
+	PuMP_MainWindow::zoomOutAction->setEnabled(true);
+	if(view->display.zoom == MAX_ZOOM_STEPS)
+		PuMP_MainWindow::zoomInAction->setEnabled(false);
+	
+	matrix.reset();
+	matrix.scale(1 + factor, 1 + factor);
+
+	view->display.displayed = QPixmap::fromImage(
+		temp.transformed(matrix,
+		Qt::SmoothTransformation));
+	view->display.scaled = false;
+	view->display.adjustSize();
+	view->display.update();
+}
+
+/**
  * Slot-function that is called, when a new tab should be opened.
  */
 void PuMP_ImageView::on_addAction_triggered()
@@ -442,7 +481,7 @@ void PuMP_ImageView::on_sizeOriginalAction()
 	temp = temp.transformed(matrix, Qt::SmoothTransformation);
 
 	view->display.displayed = QPixmap::fromImage(temp);
-	view->display.zoom = 0;
+	view->display.zoom = DEFAULT_ZOOM;
 	view->display.scaled = false;
 	view->display.adjustSize();
 	view->display.update();
@@ -475,12 +514,14 @@ void PuMP_ImageView::on_sizeFittedAction()
 	temp = temp.transformed(matrix, Qt::SmoothTransformation);
 	
 	double factor = ((double) temp.width()) / view->display.image.width();
-	factor = (log(factor) / log(2));
-	view->display.zoom = (int) factor;
+	if(factor < 1) factor *= (int)(MAX_ZOOM_STEPS / 2) + 1;
+
+	view->display.zoom = ((int) factor) + DEFAULT_ZOOM - 1;
+	qDebug() << view->display.zoom; 
 	view->display.scaled = true;
 	
 	PuMP_MainWindow::zoomInAction->setEnabled(true);
-	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
+	if(view->display.zoom == 0)
 		PuMP_MainWindow::zoomOutAction->setEnabled(false);
 
 	view->display.displayed = QPixmap::fromImage(temp);
@@ -497,23 +538,7 @@ void PuMP_ImageView::on_zoomInAction()
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
 	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	if(view->display.zoom == MAX_ZOOM_STEPS) return;
-	
-	view->display.zoom += 1;
-	double factor = pow(2, view->display.zoom);
-	
-	QMatrix matrix;
-	matrix.scale(factor, factor);
-
-	PuMP_MainWindow::zoomOutAction->setEnabled(true);
-	if(view->display.zoom == MAX_ZOOM_STEPS)
-		PuMP_MainWindow::zoomInAction->setEnabled(false);
-	
-	view->display.displayed = QPixmap::fromImage(
-		view->display.image.transformed(matrix,
-		Qt::SmoothTransformation));
-	view->display.adjustSize();
-	view->display.update();
+	zoom(view, view->display.zoom + 1);
 }
 
 /**
@@ -525,23 +550,7 @@ void PuMP_ImageView::on_zoomOutAction()
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 	
 	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS) return;
-	
-	view->display.zoom -= 1;
-	double factor = pow(2, view->display.zoom);
-	
-	QMatrix matrix;
-	matrix.scale(factor, factor);
-
-	PuMP_MainWindow::zoomInAction->setEnabled(true);
-	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
-		PuMP_MainWindow::zoomOutAction->setEnabled(false);
-	
-	view->display.displayed = QPixmap::fromImage(
-		view->display.image.transformed(matrix,
-		Qt::SmoothTransformation));
-	view->display.adjustSize();
-	view->display.update();
+	zoom(view, view->display.zoom - 1);
 }
 
 /**

@@ -30,7 +30,8 @@
 #include <QThread>
 #include <QWidget>
 
-#define MAX_ZOOM_STEPS 4
+#define MAX_ZOOM_STEPS	8
+#define DEFAULT_ZOOM	4
 
 /*****************************************************************************/
 

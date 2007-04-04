@@ -51,6 +51,7 @@ class PuMP_DirectoryView : public QTreeView
 	protected slots:
 		void on_activated(const QModelIndex &index, bool newTab = true);
 		void on_clicked(const QModelIndex &index);
+		void on_collapsedOrExpanded(const QModelIndex &index);
 	
 	public slots:
 		void on_openAction_triggered();

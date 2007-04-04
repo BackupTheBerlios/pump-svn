@@ -46,6 +46,7 @@ class PuMP_ImageView : public QTabWidget
 		QMap<QString, PuMP_DisplayView *> tabs;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
+		void zoom(PuMP_DisplayView *view, int step);
 	
 	public:
 		static QAction *closeAllAction;

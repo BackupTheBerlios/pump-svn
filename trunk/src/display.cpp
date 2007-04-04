@@ -84,7 +84,7 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 	rotation = 0;
 	scaled = false;
 	sizeOriginal = true;
-	zoom = 0;
+	zoom = DEFAULT_ZOOM;
 	
 	loader.setParent(this);
 	connect(
