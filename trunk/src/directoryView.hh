@@ -35,22 +35,18 @@ class PuMP_DirectoryView : public QTreeView
 	Q_OBJECT
 
 	protected:
-		QAction *openAction;
-		QAction *openInNewTabAction;
-		QAction *refreshAction;
-		QAction *stopAction;
-
 		QDirModel model;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
 	
 	public:
+		static QAction *openAction;
+		static QAction *openInNewTabAction;
+
 		PuMP_DirectoryView(
 			const QStringList &nameFilters,
 			QWidget *parent = 0);
 		~PuMP_DirectoryView();
-		
-		void setupActions(QAction* refreshAction, QAction *stopAction);
 	
 	protected slots:
 		void on_activated(const QModelIndex &index, bool newTab = true);
@@ -59,11 +55,9 @@ class PuMP_DirectoryView : public QTreeView
 	public slots:
 		void on_openAction_triggered();
 		void on_openInNewTabAction_triggered();
-		void on_dirOpened(const QFileInfo &info);
 		void on_refreshAction_triggered();
 	
 	signals:
-		void openDir(const QFileInfo &info);
 		void openImage(const QFileInfo &info, bool newPage);
 };
 

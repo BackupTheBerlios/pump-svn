@@ -30,6 +30,7 @@
 #include <QScrollBar>
 
 #include "display.hh"
+#include "mainWindow.hh"
 
 /*****************************************************************************/
 
@@ -85,9 +86,6 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 	sizeOriginal = true;
 	zoom = 0;
 	
-	sizeOriginalAction = NULL;
-	sizeFittedAction = NULL;
-
 	loader.setParent(this);
 	connect(
 		&loader,
@@ -110,11 +108,8 @@ void PuMP_Display::mousePressEvent(QMouseEvent *event)
 {
 	if(event->buttons() == Qt::MidButton)
 	{
-		assert(sizeOriginalAction != NULL);
-		assert(sizeFittedAction != NULL);
-
-		if(!scaled) sizeFittedAction->trigger();
-		else sizeOriginalAction->trigger();;
+		if(!scaled) PuMP_MainWindow::sizeFittedAction->trigger();
+		else PuMP_MainWindow::sizeOriginalAction->trigger();
 
 		adjustSize();
 	}
@@ -131,22 +126,6 @@ void PuMP_Display::paintEvent(QPaintEvent *event)
 	QPainter painter(this);
 	painter.setClipRegion(event->region());
 	painter.drawPixmap(event->rect(), displayed, event->rect());
-}
-
-/**
- * Function that connects the global actions for the display with its slots.
- * @param	sizeOriginalAction	The action that sets the image to original size.
- * @param	sizeFittedAction	The action that fits the image to window-size.
- */
-void PuMP_Display::setupActions(
-	QAction *sizeOriginalAction,
-	QAction *sizeFittedAction)
-{
-	assert(sizeOriginalAction != NULL);
-	assert(sizeFittedAction != NULL);
-
-	this->sizeOriginalAction = sizeOriginalAction;
-	this->sizeFittedAction = sizeFittedAction;
 }
 
 /**
@@ -208,15 +187,6 @@ PuMP_DisplayView::PuMP_DisplayView(const QFileInfo &info, QWidget *parent)
 		SLOT(on_display_loadingError()));
 	setImage(info);
 
-	mirrorHAction = NULL;
-	mirrorVAction = NULL;
-	rotateCWAction = NULL;
-	rotateCCWAction = NULL;
-	sizeOriginalAction = NULL;
-	sizeFittedAction = NULL;
-	zoomInAction = NULL;
-	zoomOutAction = NULL;
-
 	horizontalScrollBar()->setMinimum(0);
 	verticalScrollBar()->setMinimum(0);
 	
@@ -236,25 +206,16 @@ void PuMP_DisplayView::contextMenuEvent(QContextMenuEvent *event)
 {
 	if(!display.displayed.isNull())
 	{
-		assert(mirrorHAction != NULL);
-		assert(mirrorVAction != NULL);
-		assert(rotateCWAction != NULL);
-		assert(rotateCCWAction != NULL);
-		assert(sizeOriginalAction != NULL);
-		assert(sizeFittedAction != NULL);
-		assert(zoomInAction != NULL);
-		assert(zoomOutAction != NULL);
-	
 		QMenu menu(this);
-		menu.addAction(mirrorHAction);
-		menu.addAction(mirrorVAction);
-		menu.addAction(rotateCWAction);
-		menu.addAction(rotateCCWAction);
+		menu.addAction(PuMP_MainWindow::mirrorHAction);
+		menu.addAction(PuMP_MainWindow::mirrorVAction);
+		menu.addAction(PuMP_MainWindow::rotateCWAction);
+		menu.addAction(PuMP_MainWindow::rotateCCWAction);
 		menu.addSeparator();
-		menu.addAction(sizeOriginalAction);
-		menu.addAction(sizeFittedAction);
-		menu.addAction(zoomInAction);
-		menu.addAction(zoomOutAction);
+		menu.addAction(PuMP_MainWindow::sizeOriginalAction);
+		menu.addAction(PuMP_MainWindow::sizeFittedAction);
+		menu.addAction(PuMP_MainWindow::zoomInAction);
+		menu.addAction(PuMP_MainWindow::zoomOutAction);
 		menu.exec(event->globalPos());
 	}
 	else event->ignore();
@@ -348,48 +309,6 @@ void PuMP_DisplayView::setImage(const QFileInfo &info)
 {
 	this->info = info;
 	display.loader.load(this->info);
-}
-
-/**
- * Function that connects the global actions for the display with its slots.
- * @param	mirrorHAction	The action that mirrors the image horizontally.
- * @param	mirrorVAction	The action that mirrors the image vertically.
- * @param	rotateCWAction	The action that rotates the image clockwise.
- * @param	rotateCCWAction	The action that rotates the image counter-clockwise.
- * @param	sizeOriginalAction	The action that sets the image to original size.
- * @param	sizeFittedAction	The action that fits the image to window-size.
- * @param	zoomInAction	The action that zooms into the image.
- * @param	zoomOutAction	The action that zooms out of the image.
- */
-void PuMP_DisplayView::setupActions(
-	QAction *mirrorHAction,
-	QAction *mirrorVAction,
-	QAction *rotateCWAction,
-	QAction *rotateCCWAction,
-	QAction *sizeOriginalAction,
-	QAction *sizeFittedAction,
-	QAction *zoomInAction,
-	QAction *zoomOutAction)
-{
-	assert(mirrorHAction != NULL);
-	assert(mirrorVAction != NULL);
-	assert(rotateCWAction != NULL);
-	assert(rotateCCWAction != NULL);
-	assert(sizeOriginalAction != NULL);
-	assert(sizeFittedAction != NULL);
-	assert(zoomInAction != NULL);
-	assert(zoomOutAction != NULL);
-
-	this->mirrorHAction = mirrorHAction;
-	this->mirrorVAction = mirrorVAction;
-	this->rotateCWAction = rotateCWAction;
-	this->rotateCCWAction = rotateCCWAction;
-	this->sizeOriginalAction = sizeOriginalAction;
-	this->sizeFittedAction = sizeFittedAction;
-	this->zoomInAction = zoomInAction;
-	this->zoomOutAction = zoomOutAction;
-
-	display.setupActions(sizeOriginalAction, sizeFittedAction);
 }
 
 /**

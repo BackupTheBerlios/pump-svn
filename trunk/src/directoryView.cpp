@@ -26,8 +26,14 @@
 #include <QMenu>
 
 #include "directoryView.hh"
+#include "mainWindow.hh"
+#include "overview.hh"
 
 /*****************************************************************************/
+
+/** init static action pointers */
+QAction *PuMP_DirectoryView::openAction = NULL;
+QAction *PuMP_DirectoryView::openInNewTabAction = NULL;
 
 /**
  * Constructor of class PuMP_DirectoryView that mainly provides the
@@ -40,11 +46,6 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 	QWidget *parent)
 	: QTreeView(parent)
 {
-	openAction = NULL;
-	openInNewTabAction = NULL;
-	refreshAction = NULL;
-	stopAction = NULL;
-
 	model.setFilter(
 		QDir::AllDirs |
 		QDir::Files |
@@ -59,6 +60,27 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 	setMaximumWidth(200);
 	setMinimumWidth(140);
 	setModel(&model);
+
+	PuMP_DirectoryView::openAction = new QAction("Open", this);
+	connect(
+		PuMP_DirectoryView::openAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openAction_triggered()));
+	PuMP_DirectoryView::openInNewTabAction = new QAction(
+		QIcon(":/tab_new.png"),
+		"Open in new tab",
+		this);
+	connect(
+		PuMP_DirectoryView::openInNewTabAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openInNewTabAction_triggered()));
+	connect(
+		PuMP_MainWindow::refreshAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_refreshAction_triggered()));
 
 	connect(
 		this,
@@ -77,8 +99,8 @@ PuMP_DirectoryView::PuMP_DirectoryView(
  */
 PuMP_DirectoryView::~PuMP_DirectoryView()
 {
-	delete openAction;
-	delete openInNewTabAction;
+	delete PuMP_DirectoryView::openAction;
+	delete PuMP_DirectoryView::openInNewTabAction;
 }
 
 /**
@@ -95,55 +117,17 @@ void PuMP_DirectoryView::contextMenuEvent(QContextMenuEvent *e)
 	QFileInfo info = model.fileInfo(index);
 	if(info.isDir()) enable = false;
 
-	assert(openAction != NULL);
-	assert(openInNewTabAction != NULL);
-	assert(refreshAction != NULL);
-	assert(stopAction != NULL);
-
-	openAction->setEnabled(enable);
-	openInNewTabAction->setEnabled(enable);
-	refreshAction->setEnabled(!enable);
+	PuMP_DirectoryView::openAction->setEnabled(enable);
+	PuMP_DirectoryView::openInNewTabAction->setEnabled(enable);
+	PuMP_MainWindow::refreshAction->setEnabled(!enable);
 
 	QMenu menu(this);
-	menu.addAction(openAction);
-	menu.addAction(openInNewTabAction);
+	menu.addAction(PuMP_DirectoryView::openAction);
+	menu.addAction(PuMP_DirectoryView::openInNewTabAction);
 	menu.addSeparator();
-	menu.addAction(refreshAction);
-	menu.addAction(stopAction);
+	menu.addAction(PuMP_MainWindow::refreshAction);
+	menu.addAction(PuMP_MainWindow::stopAction);
 	menu.exec(e->globalPos());
-}
-
-/**
- * Function that connects the global actions for the dir-view with its slots.
- * @param	refreshAction	The action to refresh the current directory.
- * @param	stopAction	The action that stops current processings.
- */
-void PuMP_DirectoryView::setupActions(
-	QAction* refreshAction,
-	QAction *stopAction)
-{
-	assert(refreshAction != NULL);
-	assert(stopAction != NULL);
-	
-	openAction = new QAction("Open", this);
-	connect(
-		openAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openAction_triggered()));
-	openInNewTabAction = new QAction("Open in new tab", this);
-	connect(
-		openInNewTabAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openInNewTabAction_triggered()));
-	this->refreshAction = refreshAction;
-	connect(
-		refreshAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_refreshAction_triggered()));
-	this->stopAction = stopAction;
 }
 
 /**
@@ -167,7 +151,11 @@ void PuMP_DirectoryView::on_clicked(const QModelIndex &index)
 {
 	setCurrentIndex(index);
 	QFileInfo info = model.fileInfo(index);
-	if(info.isDir()) emit openDir(info);
+	if(info.isDir())
+	{
+		PuMP_Overview::openAction->setData(info.filePath());
+		PuMP_Overview::openAction->trigger();
+	}
 }
 
 /**
@@ -175,8 +163,20 @@ void PuMP_DirectoryView::on_clicked(const QModelIndex &index)
  */
 void PuMP_DirectoryView::on_openAction_triggered()
 {
-	QModelIndex index = currentIndex();
-	on_activated(index, false);
+	QVariant v = PuMP_DirectoryView::openAction->data();
+	if(v.isValid())
+	{
+		QFileInfo info(v.toString());
+		PuMP_DirectoryView::openAction->setData(QVariant());
+		QModelIndex index = model.index(info.filePath());
+		if(index.isValid() && info.exists() && info.isDir())
+			setCurrentIndex(index);
+	}
+	else
+	{
+		QModelIndex index = currentIndex();
+		on_activated(index, false);
+	}
 }
 
 /**
@@ -189,18 +189,6 @@ void PuMP_DirectoryView::on_openInNewTabAction_triggered()
 }
 
 /**
- * Slot-function that updates the trees current selection to the given one.
- * @param	info	The QFileInfo-Object pointing on the new selection.
- */
-void PuMP_DirectoryView::on_dirOpened(const QFileInfo &info)
-{
-	QModelIndex index = model.index(info.filePath());
-	if(!index.isValid() || !info.isDir()) return;
-	
-	setCurrentIndex(index);
-}
-
-/**
  * Slot-function that is called when the refresh-action was triggered.
  */
 void PuMP_DirectoryView::on_refreshAction_triggered()
@@ -209,7 +197,11 @@ void PuMP_DirectoryView::on_refreshAction_triggered()
 	if(index.isValid())
 	{
 		QFileInfo info = model.fileInfo(index);
-		if(info.isDir()) emit openDir(info);
+		if(info.isDir())
+		{
+			PuMP_Overview::openAction->setData(info.filePath());
+			PuMP_Overview::openAction->trigger();
+		}
 	
 		model.refresh(index);
 	}

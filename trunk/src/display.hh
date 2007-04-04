@@ -22,7 +22,6 @@
 #ifndef DISPLAY_HH_
 #define DISPLAY_HH_
 
-#include <QAction>
 #include <QFileInfo>
 #include <QImage>
 #include <QMatrix>
@@ -62,9 +61,6 @@ class PuMP_Display : public QWidget
 	Q_OBJECT
 	
 	protected:
-		QAction *sizeOriginalAction;
-		QAction *sizeFittedAction;
-
 		void mousePressEvent(QMouseEvent *event);
 		void paintEvent(QPaintEvent *event);
 	
@@ -83,8 +79,6 @@ class PuMP_Display : public QWidget
 		QPixmap displayed;
 
 		PuMP_Display(const QFileInfo &info = QFileInfo(), QWidget *parent = 0);
-
-		void setupActions(QAction *sizeOriginalAction, QAction *sizeFittedAction);
 		QSize sizeHint() const;
 	
 	public slots:
@@ -102,15 +96,6 @@ class PuMP_DisplayView : public QScrollArea
 	Q_OBJECT
 
 	protected:
-		QAction *mirrorHAction;
-		QAction *mirrorVAction;
-		QAction *rotateCWAction;
-		QAction *rotateCCWAction;
-		QAction *sizeOriginalAction;
-		QAction *sizeFittedAction;
-		QAction *zoomInAction;
-		QAction *zoomOutAction;
-	
 		QFileInfo info;
 		QPoint lastPos;
 
@@ -129,15 +114,6 @@ class PuMP_DisplayView : public QScrollArea
 		QString filePath() const;
 
 		void setImage(const QFileInfo &info);
-		void setupActions(
-			QAction *mirrorHAction,
-			QAction *mirrorVAction,
-			QAction *rotateCWAction,
-			QAction *rotateCCWAction,
-			QAction *sizeOriginalAction,
-			QAction *sizeFittedAction,
-			QAction *zoomInAction,
-			QAction *zoomOutAction);
 
 	public slots:
 		void on_display_loadingError();

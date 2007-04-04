@@ -125,31 +125,21 @@ class PuMP_Overview : public QListView
 		PuMP_OverviewModel model;
 		PuMP_OverviewLoader loader;
 
-		QAction *openAction;
-		QAction *openInNewTabAction;
-		QAction *refreshAction;
-		QAction *stopAction;
-
 		QDir dir;
 		QList<QFileInfo> current;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
-//		void focusInEvent(QFocusEvent *event);
 	
 	public:
+		static QAction *openAction;
+		static QAction *openInNewTabAction;
+
 		PuMP_Overview(QStringList &nameFilters, QWidget *parent = 0);
 		~PuMP_Overview();
 		
-		void setupActions(
-			QAction *refreshAction,
-			QAction *stopAction);
-
-	protected slots:
-		void on_activated(const QModelIndex &index, bool newTab = true);
-		void on_openAction_triggered();
-		void on_openInNewTabAction_triggered();
-		
 	public slots:
+		void on_activated(const QModelIndex &index, bool newTab = true);
+
 		void on_loader_finished();
 		void on_loader_imageIsNull(const QString &fileName);
 		void on_loader_processedImage(
@@ -159,11 +149,12 @@ class PuMP_Overview : public QListView
 			bool wasKilled);
 		
 		void on_open(const QFileInfo &info);
+		void on_openAction_triggered();
+		void on_openInNewTabAction_triggered();
 		void on_refresh();
 		void on_stop();
 	
 	signals:
-		void dirOpened(const QFileInfo &info);
 		void openImage(const QFileInfo &info, bool newPage);
 		void updateStatusBar(int value, const QString &text);
 

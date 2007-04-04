@@ -29,9 +29,14 @@
 
 #include "display.hh"
 #include "imageView.hh"
+#include "mainWindow.hh"
 #include "overview.hh"
 
 /*****************************************************************************/
+
+/** init static action-pointers */
+QAction *PuMP_ImageView::closeAllAction = NULL;
+QAction *PuMP_ImageView::closeOthersAction = NULL;
 
 /**
  * Constructor of class PuMP_ImageView which mainly sets up the given
@@ -44,11 +49,6 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
 	: QTabWidget(parent)
 {
 	overview = new PuMP_Overview(nameFilters, parent);
-	connect(
-		overview,
-		SIGNAL(dirOpened(const QFileInfo &)),
-		this,
-		SLOT(on_overview_dirOpened(const QFileInfo &)));
 	connect(
 		overview,
 		SIGNAL(openImage(const QFileInfo &, bool)),
@@ -67,18 +67,68 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
 		this,
 		SLOT(on_currentChanged(int)));
 
-	addAction = NULL;
-	closeAction = NULL;
-	closeAllAction = NULL;
-	closeOthersAction = NULL;
-	mirrorHAction = NULL;
-	mirrorVAction = NULL;
-	rotateCWAction = NULL;
-	rotateCCWAction = NULL;
-	sizeOriginalAction = NULL;
-	sizeFittedAction = NULL;
-	zoomInAction = NULL;
-	zoomOutAction = NULL;
+	connect(
+		PuMP_MainWindow::addAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_addAction_triggered()));
+	connect(
+		PuMP_MainWindow::closeAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_closeAction_triggered()));
+	PuMP_ImageView::closeAllAction = new QAction("Close all tabs", this);
+	connect(
+		PuMP_ImageView::closeAllAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_closeAllAction_triggered()));
+	PuMP_ImageView::closeOthersAction = new QAction("Close other tabs", this);
+	connect(
+		PuMP_ImageView::closeOthersAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_closeOthersAction_triggered()));
+	connect(
+		PuMP_MainWindow::mirrorHAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_mirrorHAction()));
+	connect(
+		PuMP_MainWindow::mirrorVAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_mirrorVAction()));
+	connect(
+		PuMP_MainWindow::rotateCWAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_rotateCWAction()));
+	connect(
+		PuMP_MainWindow::rotateCCWAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_rotateCCWAction()));
+	connect(
+		PuMP_MainWindow::sizeOriginalAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_sizeOriginalAction()));
+	connect(
+		PuMP_MainWindow::sizeFittedAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_sizeFittedAction()));
+	connect(
+		PuMP_MainWindow::zoomInAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_zoomInAction()));
+	connect(
+		PuMP_MainWindow::zoomOutAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_zoomOutAction()));
 }
 
 /**
@@ -87,8 +137,8 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
  */
 PuMP_ImageView::~PuMP_ImageView()
 {
-	delete closeAllAction;
-	delete closeOthersAction;
+	delete PuMP_ImageView::closeAllAction;
+	delete PuMP_ImageView::closeOthersAction;
 	
 	removeTab(indexOf(overview));
 	delete overview;
@@ -113,126 +163,18 @@ void PuMP_ImageView::contextMenuEvent(QContextMenuEvent *e)
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0) return;
 	
-	closeAction->setEnabled(true);
-	closeAllAction->setEnabled(true);
-	closeOthersAction->setEnabled(true);
-	if(cw == (QWidget *) overview) closeAction->setEnabled(false);
+	PuMP_MainWindow::closeAction->setEnabled(true);
+	PuMP_ImageView::closeAllAction->setEnabled(true);
+	PuMP_ImageView::closeOthersAction->setEnabled(true);
+	if(cw == (QWidget *) overview)
+		PuMP_MainWindow::closeAction->setEnabled(false);
 
 	QMenu menu(this);
-	menu.addAction(closeAction);
+	menu.addAction(PuMP_MainWindow::closeAction);
 	menu.addSeparator();
-	menu.addAction(closeAllAction);
-	menu.addAction(closeOthersAction);
+	menu.addAction(PuMP_ImageView::closeAllAction);
+	menu.addAction(PuMP_ImageView::closeOthersAction);
 	menu.exec(e->globalPos());
-}
-
-/**
- * Function that connects the global actions for the imageview with its slots.
- * @param	addAction	The action that opens the current image in a new tab.
- * @param	closeAction	The action that closes the current tab.
- * @param	mirrorHAction	The action that mirrors the image horizontally.
- * @param	mirrorVAction	The action that mirrors the image vertically.
- * @param	refreshAction	The action to refresh the current directory.
- * @param	rotateCWAction	The action that rotates the image clockwise.
- * @param	rotateCCWAction	The action that rotates the image counter-clockwise.
- * @param	sizeOriginalAction	The action that sets the image to original size.
- * @param	sizeFittedAction	The action that fits the image to window-size.
- * @param	stopAction	The action that stops current processings.
- * @param	zoomInAction	The action that zooms into the image.
- * @param	zoomOutAction	The action that zooms out of the image.
- */
-void PuMP_ImageView::setupActions(
-	QAction *addAction,
-	QAction *closeAction,
-	QAction *mirrorHAction,
-	QAction *mirrorVAction,
-	QAction *refreshAction,
-	QAction *rotateCWAction,
-	QAction *rotateCCWAction,
-	QAction *sizeOriginalAction,
-	QAction *sizeFittedAction,
-	QAction *stopAction,
-	QAction *zoomInAction,
-	QAction *zoomOutAction)
-{
-	assert(addAction != NULL);
-	assert(closeAction != NULL);
-
-	this->addAction = addAction;
-	connect(
-		addAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_addAction_triggered()));
-	this->closeAction = closeAction;
-	connect(
-		closeAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeAction_triggered()));
-	closeAllAction = new QAction("Close all tabs", this);
-	connect(
-		closeAllAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeAllAction_triggered()));
-	closeOthersAction = new QAction("Close other tabs", this);
-	connect(
-		closeOthersAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeOthersAction_triggered()));
-	this->mirrorHAction = mirrorHAction;
-	connect(
-		mirrorHAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_mirrorHAction()));
-	this->mirrorVAction = mirrorVAction;
-	connect(
-		mirrorVAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_mirrorVAction()));
-	this->rotateCWAction = rotateCWAction;
-	connect(
-		rotateCWAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_rotateCWAction()));
-	this->rotateCCWAction = rotateCCWAction;
-	connect(
-		rotateCCWAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_rotateCCWAction()));
-	this->sizeOriginalAction = sizeOriginalAction;
-	connect(
-		sizeOriginalAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_sizeOriginalAction()));
-	this->sizeFittedAction = sizeFittedAction;
-	connect(
-		sizeFittedAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_sizeFittedAction()));
-	this->zoomInAction = zoomInAction;
-	connect(
-		zoomInAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_zoomInAction()));
-	this->zoomOutAction = zoomOutAction;
-	connect(
-		zoomOutAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_zoomOutAction()));
-
-	assert(overview != NULL);	
-	overview->setupActions(refreshAction, stopAction);
 }
 
 /**
@@ -277,36 +219,37 @@ void PuMP_ImageView::on_currentChanged(int index)
 	if(cw == NULL || tabs.size() == 0 || cw == overview)
 	{
 		bool enable = (tabs.size() != 0);
-		addAction->setEnabled(true);
-		closeAction->setEnabled(false);
-		closeAllAction->setEnabled(enable);
-		closeOthersAction->setEnabled(enable);
-		mirrorHAction->setEnabled(false);
-		mirrorVAction->setEnabled(false);
-		rotateCWAction->setEnabled(false);
-		rotateCCWAction->setEnabled(false);
-		sizeOriginalAction->setEnabled(false);
-		sizeFittedAction->setEnabled(false);
-		zoomInAction->setEnabled(false);
-		zoomOutAction->setEnabled(false);
+		PuMP_MainWindow::addAction->setEnabled(true);
+		PuMP_MainWindow::closeAction->setEnabled(false);
+		PuMP_ImageView::closeAllAction->setEnabled(enable);
+		PuMP_ImageView::closeOthersAction->setEnabled(enable);
+		PuMP_MainWindow::mirrorHAction->setEnabled(false);
+		PuMP_MainWindow::mirrorVAction->setEnabled(false);
+		PuMP_MainWindow::rotateCWAction->setEnabled(false);
+		PuMP_MainWindow::rotateCCWAction->setEnabled(false);
+		PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
+		PuMP_MainWindow::sizeFittedAction->setEnabled(false);
+		PuMP_MainWindow::zoomInAction->setEnabled(false);
+		PuMP_MainWindow::zoomOutAction->setEnabled(false);
 	}
 	else
 	{
 		bool enable = (tabs.size() != 1);
 		PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
 		
-		addAction->setEnabled(true);
-		closeAction->setEnabled(true);
-		closeAllAction->setEnabled(true);
-		closeOthersAction->setEnabled(enable);
-		mirrorHAction->setEnabled(true);
-		mirrorVAction->setEnabled(true);
-		rotateCWAction->setEnabled(true);
-		rotateCCWAction->setEnabled(true);
-		sizeOriginalAction->setEnabled(view->display.scaled);
-		sizeFittedAction->setEnabled(!view->display.scaled);
-		zoomInAction->setEnabled((view->display.zoom != MAX_ZOOM_STEPS));
-		zoomOutAction->setEnabled(
+		PuMP_MainWindow::addAction->setEnabled(true);
+		PuMP_MainWindow::closeAction->setEnabled(true);
+		PuMP_ImageView::closeAllAction->setEnabled(true);
+		PuMP_ImageView::closeOthersAction->setEnabled(enable);
+		PuMP_MainWindow::mirrorHAction->setEnabled(true);
+		PuMP_MainWindow::mirrorVAction->setEnabled(true);
+		PuMP_MainWindow::rotateCWAction->setEnabled(true);
+		PuMP_MainWindow::rotateCCWAction->setEnabled(true);
+		PuMP_MainWindow::sizeOriginalAction->setEnabled(view->display.scaled);
+		PuMP_MainWindow::sizeFittedAction->setEnabled(!view->display.scaled);
+		PuMP_MainWindow::zoomInAction->setEnabled(
+			(view->display.zoom != MAX_ZOOM_STEPS));
+		PuMP_MainWindow::zoomOutAction->setEnabled(
 			(view->display.zoom != (-1) * MAX_ZOOM_STEPS));
 	}
 }
@@ -398,15 +341,6 @@ void PuMP_ImageView::on_openImage(const QFileInfo &info, bool newTab)
 			SIGNAL(loadingError(PuMP_DisplayView *)),
 			this,
 			SLOT(on_displayView_loadingError(PuMP_DisplayView *)));
-		view->setupActions(
-			mirrorHAction,
-			mirrorVAction,
-			rotateCWAction,
-			rotateCCWAction,
-			sizeOriginalAction,
-			sizeFittedAction,
-			zoomInAction,
-			zoomOutAction);
 
 		tabs[info.filePath()] = view;
 		infos[info.filePath()] = info;
@@ -440,24 +374,6 @@ void PuMP_ImageView::on_openImage(const QFileInfo &info, bool newTab)
 		
 		setCurrentWidget(view);
 	}
-}
-
-/**
- * Slot-function that is called to request an overview.
- * @param	info	File-info-object representing the folder to overview.
- */
-void PuMP_ImageView::on_openDir(const QFileInfo &info)
-{
-	overview->on_open(info);
-}
-
-/**
- * Slot-function that hands out the overview's dir-opened-signal.
- * @param	info	The QFileInfo-Object pointing on the new selection.
- */
-void PuMP_ImageView::on_overview_dirOpened(const QFileInfo &info)
-{
-	emit dirOpened(info);
 }
 
 /**
@@ -512,8 +428,8 @@ void PuMP_ImageView::on_sizeOriginalAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 
-	sizeOriginalAction->setEnabled(false);
-	sizeFittedAction->setEnabled(true);
+	PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
+	PuMP_MainWindow::sizeFittedAction->setEnabled(true);
 
 	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
 
@@ -540,8 +456,8 @@ void PuMP_ImageView::on_sizeFittedAction()
 	QWidget *cw = currentWidget();
 	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
 
-	sizeOriginalAction->setEnabled(true);
-	sizeFittedAction->setEnabled(false);
+	PuMP_MainWindow::sizeOriginalAction->setEnabled(true);
+	PuMP_MainWindow::sizeFittedAction->setEnabled(false);
 
 	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
 
@@ -563,9 +479,9 @@ void PuMP_ImageView::on_sizeFittedAction()
 	view->display.zoom = (int) factor;
 	view->display.scaled = true;
 	
-	zoomInAction->setEnabled(true);
+	PuMP_MainWindow::zoomInAction->setEnabled(true);
 	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
-		zoomOutAction->setEnabled(false);
+		PuMP_MainWindow::zoomOutAction->setEnabled(false);
 
 	view->display.displayed = QPixmap::fromImage(temp);
 	view->display.adjustSize();
@@ -589,9 +505,9 @@ void PuMP_ImageView::on_zoomInAction()
 	QMatrix matrix;
 	matrix.scale(factor, factor);
 
-	zoomOutAction->setEnabled(true);
+	PuMP_MainWindow::zoomOutAction->setEnabled(true);
 	if(view->display.zoom == MAX_ZOOM_STEPS)
-		zoomInAction->setEnabled(false);
+		PuMP_MainWindow::zoomInAction->setEnabled(false);
 	
 	view->display.displayed = QPixmap::fromImage(
 		view->display.image.transformed(matrix,
@@ -617,9 +533,9 @@ void PuMP_ImageView::on_zoomOutAction()
 	QMatrix matrix;
 	matrix.scale(factor, factor);
 
-	zoomInAction->setEnabled(true);
+	PuMP_MainWindow::zoomInAction->setEnabled(true);
 	if(view->display.zoom == (-1) * MAX_ZOOM_STEPS)
-		zoomOutAction->setEnabled(false);
+		PuMP_MainWindow::zoomOutAction->setEnabled(false);
 	
 	view->display.displayed = QPixmap::fromImage(
 		view->display.image.transformed(matrix,

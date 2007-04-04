@@ -26,6 +26,8 @@
 #include <QMenu>
 #include <QMessageBox>
 
+#include "directoryView.hh"
+#include "mainWindow.hh"
 #include "overview.hh"
 
 /*****************************************************************************/
@@ -335,6 +337,10 @@ bool PuMP_OverviewLoader::wasKilled()
 
 /*****************************************************************************/
 
+/** init static actions */
+QAction *PuMP_Overview::openAction = NULL;
+QAction *PuMP_Overview::openInNewTabAction = NULL;
+
 /**
  * Constructor of class PuMP_Overview which is basically a QListView to
  * display the PuMP_OverviewModel.
@@ -350,10 +356,31 @@ PuMP_Overview::PuMP_Overview(
 	progress = 0;
 	progressMax = 1;
 
-	openAction = NULL;
-	openInNewTabAction = NULL;
-	refreshAction = NULL;
-	stopAction = NULL;
+	PuMP_Overview::openAction = new QAction("Open", this);
+	connect(
+		PuMP_Overview::openAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openAction_triggered()));
+	PuMP_Overview::openInNewTabAction = new QAction(
+		QIcon(":/tab_new.png"),
+		"Open in new tab",
+		this);
+	connect(
+		PuMP_Overview::openInNewTabAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_openInNewTabAction_triggered()));
+	connect(
+		PuMP_MainWindow::refreshAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_refresh()));
+	connect(
+		PuMP_MainWindow::stopAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_stop()));
 
 	model.setParent(this);
 	model.setFontMetrics(fontMetrics());
@@ -406,8 +433,8 @@ PuMP_Overview::PuMP_Overview(
  */
 PuMP_Overview::~PuMP_Overview()
 {
-	delete openAction;
-	delete openInNewTabAction;
+	delete PuMP_Overview::openAction;
+	delete PuMP_Overview::openInNewTabAction;
 
 	on_stop();
 	model.clear();
@@ -427,60 +454,17 @@ void PuMP_Overview::contextMenuEvent(QContextMenuEvent *e)
 	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
 	if(!info.exists()) show = false;
 	
-	assert(openAction != NULL);
-	assert(openInNewTabAction != NULL);
-	assert(refreshAction != NULL);
-	assert(stopAction != NULL);
-	
-	openAction->setEnabled(show);
-	openInNewTabAction->setEnabled(!info.isDir() && show);
-	refreshAction->setEnabled(dir.exists());
+	PuMP_Overview::openAction->setEnabled(show);
+	PuMP_Overview::openInNewTabAction->setEnabled(!info.isDir() && show);
+	PuMP_MainWindow::refreshAction->setEnabled(dir.exists());
 
 	QMenu menu(this);
-	menu.addAction(openAction);
-	menu.addAction(openInNewTabAction);
+	menu.addAction(PuMP_Overview::openAction);
+	menu.addAction(PuMP_Overview::openInNewTabAction);
 	menu.addSeparator();
-	menu.addAction(refreshAction);
-	menu.addAction(stopAction);
+	menu.addAction(PuMP_MainWindow::refreshAction);
+	menu.addAction(PuMP_MainWindow::stopAction);
 	menu.exec(e->globalPos());
-}
-
-/**
- * Function that connects the global actions for the overview with its slots.
- * @param	refreshAction	The action to refresh the current directory.
- * @param	stopAction	The action that stops current processings.
- */
-void PuMP_Overview::setupActions(
-	QAction *refreshAction,
-	QAction *stopAction)
-{
-	assert(refreshAction != NULL);
-	assert(stopAction != NULL);
-
-	openAction = new QAction("Open", this);
-	connect(
-		openAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openAction_triggered()));
-	openInNewTabAction = new QAction("Open in new tab", this);
-	connect(
-		openInNewTabAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_openInNewTabAction_triggered()));
-	this->refreshAction = refreshAction;
-	connect(
-		refreshAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_refresh()));
-	this->stopAction = stopAction;
-	connect(
-		stopAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_stop()));
 }
 
 /**
@@ -498,29 +482,10 @@ void PuMP_Overview::on_activated(const QModelIndex &index, bool newTab)
 	if(info.isDir())
 	{
 		on_open(info);
-		emit dirOpened(info);
+		PuMP_DirectoryView::openAction->setData(info.filePath());
+		PuMP_DirectoryView::openAction->trigger();
 	}
 	else emit openImage(info, newTab);
-}
-
-/**
- * Slot-function that is called when the user demanded to open a selected file
- * or directory.
- */
-void PuMP_Overview::on_openAction_triggered()
-{
-	QModelIndex index = currentIndex();
-	on_activated(index, false);
-}
-
-/**
- * Slot-function that is called when the user demanded to open a selected
- * file in a new tab.
- */
-void PuMP_Overview::on_openInNewTabAction_triggered()
-{
-	QModelIndex index = currentIndex();
-	on_activated(index, true);
 }
 
 /**
@@ -541,8 +506,8 @@ void PuMP_Overview::on_loader_finished()
 	}
 	else
 	{
-		refreshAction->setEnabled(true);
-		stopAction->setEnabled(false);
+		PuMP_MainWindow::refreshAction->setEnabled(true);
+		PuMP_MainWindow::stopAction->setEnabled(false);
 		emit updateStatusBar(100, QString());
 	}
 }
@@ -613,8 +578,8 @@ void PuMP_Overview::on_open(const QFileInfo &info)
 		
 		if(!current.isEmpty())
 		{
-			refreshAction->setEnabled(false);
-			stopAction->setEnabled(true);
+			PuMP_MainWindow::refreshAction->setEnabled(false);
+			PuMP_MainWindow::stopAction->setEnabled(true);
 			progressMax = current.size();
 			QFileInfo first = current.first();
 			emit updateStatusBar(
@@ -628,6 +593,36 @@ void PuMP_Overview::on_open(const QFileInfo &info)
 			}
 		}
 	}
+}
+
+/**
+ * Slot-function that is called when the user demanded to open a selected file
+ * or directory.
+ */
+void PuMP_Overview::on_openAction_triggered()
+{
+	QVariant v = PuMP_Overview::openAction->data();
+	if(v.isValid())
+	{
+		QFileInfo f(v.toString());
+		PuMP_Overview::openAction->setData(QVariant());
+		if(f.exists() && f.isDir()) on_open(f);
+	}
+	else
+	{
+		QModelIndex index = currentIndex();
+		on_activated(index, false);
+	}
+}
+
+/**
+ * Slot-function that is called when the user demanded to open a selected
+ * file in a new tab.
+ */
+void PuMP_Overview::on_openInNewTabAction_triggered()
+{
+	QModelIndex index = currentIndex();
+	on_activated(index, true);
 }
 
 /**
@@ -651,7 +646,7 @@ void PuMP_Overview::on_refresh()
  */
 void PuMP_Overview::on_stop()
 {
-	stopAction->setEnabled(false);
+	PuMP_MainWindow::stopAction->setEnabled(false);
 	
 	progress = 0;
 	progressMax = 1;

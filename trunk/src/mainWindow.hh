@@ -44,26 +44,6 @@ class PuMP_MainWindow : public QMainWindow
 		PuMP_DirectoryView *directoryView;
 		PuMP_ImageView *imageView;
 		
-		QAction *aboutAction;
-		QAction *aboutQtAction;
-		QAction *addAction;
-		QAction *closeAction;
-		QAction *exitAction;
-		QAction *forceExitAction;
-		QAction *homeAction;
-		QAction *mirrorHAction;
-		QAction *mirrorVAction;
-		QAction *nextAction;
-		QAction *previousAction;
-		QAction *refreshAction;
-		QAction *rotateCWAction;
-		QAction *rotateCCWAction;
-		QAction *sizeOriginalAction;
-		QAction *sizeFittedAction;
-		QAction *stopAction;
-		QAction *zoomInAction;
-		QAction *zoomOutAction;
-
 		QLabel progressBarLabel;
 		QProgressBar progressBar;
 		QStringList nameFilters;
@@ -73,6 +53,28 @@ class PuMP_MainWindow : public QMainWindow
 		void setupActions();
 
 	public:
+		static QAction *aboutAction;
+		static QAction *aboutQtAction;
+		static QAction *addAction;
+		static QAction *backwardAction;
+		static QAction *closeAction;
+		static QAction *exitAction;
+		static QAction *forceExitAction;
+		static QAction *forwardAction;
+		static QAction *homeAction;
+		static QAction *mirrorHAction;
+		static QAction *mirrorVAction;
+		static QAction *nextAction;
+		static QAction *previousAction;
+		static QAction *refreshAction;
+		static QAction *rotateCWAction;
+		static QAction *rotateCCWAction;
+		static QAction *sizeOriginalAction;
+		static QAction *sizeFittedAction;
+		static QAction *stopAction;
+		static QAction *zoomInAction;
+		static QAction *zoomOutAction;
+
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
 		~PuMP_MainWindow();
 

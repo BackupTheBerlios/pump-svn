@@ -40,6 +40,29 @@
 
 /*****************************************************************************/
 
+/** init static action-pointers */
+QAction *PuMP_MainWindow::aboutAction = NULL;
+QAction *PuMP_MainWindow::aboutQtAction = NULL;
+QAction *PuMP_MainWindow::addAction = NULL;
+QAction *PuMP_MainWindow::backwardAction = NULL;
+QAction *PuMP_MainWindow::closeAction = NULL;
+QAction *PuMP_MainWindow::exitAction = NULL;
+QAction *PuMP_MainWindow::forceExitAction = NULL;
+QAction *PuMP_MainWindow::forwardAction = NULL;
+QAction *PuMP_MainWindow::homeAction = NULL;
+QAction *PuMP_MainWindow::mirrorHAction = NULL;
+QAction *PuMP_MainWindow::mirrorVAction = NULL;
+QAction *PuMP_MainWindow::nextAction = NULL;
+QAction *PuMP_MainWindow::previousAction = NULL;
+QAction *PuMP_MainWindow::refreshAction = NULL;
+QAction *PuMP_MainWindow::rotateCWAction = NULL;
+QAction *PuMP_MainWindow::rotateCCWAction = NULL;
+QAction *PuMP_MainWindow::sizeOriginalAction = NULL;
+QAction *PuMP_MainWindow::sizeFittedAction = NULL;
+QAction *PuMP_MainWindow::stopAction = NULL;
+QAction *PuMP_MainWindow::zoomInAction = NULL;
+QAction *PuMP_MainWindow::zoomOutAction = NULL;
+
 /**
  * Constructor of class PuMP_MainWindow that allocates all needed components,
  * sets the layout and other mainwindow-properties and makes all
@@ -52,6 +75,9 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 {
 	// find out which image-formats are supported
 	getSupportedImageFormats();
+
+	// setup global actions
+	setupActions();
 	
 	// central-widget and main layout
 	QWidget *cWidget = new QWidget(this);
@@ -64,12 +90,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	hBoxLayout->addWidget(directoryView);
 	hBoxLayout->addWidget(imageView);
 
-	// connect both
-	connect(
-		directoryView,
-		SIGNAL(openDir(const QFileInfo &)),
-		imageView,
-		SLOT(on_openDir(const QFileInfo &)));
+	// connect their signals
 	connect(
 		directoryView,
 		SIGNAL(openImage(const QFileInfo &, bool)),
@@ -77,76 +98,73 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 		SLOT(on_openImage(const QFileInfo &, bool)));
 	connect(
 		imageView,
-		SIGNAL(dirOpened(const QFileInfo &)),
-		directoryView,
-		SLOT(on_dirOpened(const QFileInfo &)));	
-	connect(
-		imageView,
 		SIGNAL(updateStatusBar(int, const QString &)),
 		this,
 		SLOT(on_statusBarUpdate(int, const QString &)));
 		
-	// setup global actions
-	setupActions();
-	
 	// toolbar
 	toolBar.setParent(this);
 	toolBar.setMovable(false);
 	toolBar.setAllowedAreas(Qt::TopToolBarArea);
 	toolBar.setToolButtonStyle(Qt::ToolButtonIconOnly);
-	toolBar.insertAction(NULL, homeAction);
-	toolBar.insertAction(NULL, previousAction);
-	toolBar.insertAction(NULL, nextAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::homeAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::backwardAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::forwardAction);
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, refreshAction);
-	toolBar.insertAction(NULL, stopAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::refreshAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::stopAction);
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, addAction);
-	toolBar.insertAction(NULL, closeAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::addAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::closeAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::previousAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::nextAction);	
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, mirrorHAction);
-	toolBar.insertAction(NULL, mirrorVAction);
-	toolBar.insertAction(NULL, rotateCCWAction);
-	toolBar.insertAction(NULL, rotateCWAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::mirrorHAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::mirrorVAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::rotateCCWAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::rotateCWAction);
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, sizeOriginalAction);
-	toolBar.insertAction(NULL, sizeFittedAction);
-	toolBar.insertAction(NULL, zoomInAction);
-	toolBar.insertAction(NULL, zoomOutAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::sizeOriginalAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::sizeFittedAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::zoomInAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::zoomOutAction);
 	toolBar.addSeparator();
 	addToolBar(&toolBar);
 
 	// setup menubar
 	QMenu *menu = NULL;
 	menu = menuBar()->addMenu("&File");
-	menu->insertAction(NULL, addAction);
-	menu->insertAction(NULL, closeAction);
+	menu->insertAction(NULL, PuMP_MainWindow::addAction);
+	menu->insertAction(NULL, PuMP_MainWindow::closeAction);
 	menu->addSeparator();
-	menu->insertAction(NULL, forceExitAction);
-	menu->insertAction(NULL, exitAction);
+	menu->insertAction(NULL, PuMP_MainWindow::forceExitAction);
+	menu->insertAction(NULL, PuMP_MainWindow::exitAction);
 	menu = menuBar()->addMenu("&Edit");
-//	menu->insertAction(NULL, exportAction);
-//	menu->insertAction(NULL, preferenceAction);
+//	menu->insertAction(NULL, PuMP_MainWindow::exportAction);
+//	menu->insertAction(NULL, PuMP_MainWindow::preferenceAction);
 	menu = menuBar()->addMenu("&View");
-	menu->insertAction(NULL, mirrorHAction);
-	menu->insertAction(NULL, mirrorVAction);
-	menu->insertAction(NULL, rotateCCWAction);
-	menu->insertAction(NULL, rotateCWAction);
+	menu->insertAction(NULL, PuMP_MainWindow::mirrorHAction);
+	menu->insertAction(NULL, PuMP_MainWindow::mirrorVAction);
+	menu->insertAction(NULL, PuMP_MainWindow::rotateCCWAction);
+	menu->insertAction(NULL, PuMP_MainWindow::rotateCWAction);
 	menu->addSeparator();
-	menu->insertAction(NULL, sizeOriginalAction);
-	menu->insertAction(NULL, sizeFittedAction);
-	menu->insertAction(NULL, zoomInAction);
-	menu->insertAction(NULL, zoomOutAction);
+	menu->insertAction(NULL, PuMP_MainWindow::sizeOriginalAction);
+	menu->insertAction(NULL, PuMP_MainWindow::sizeFittedAction);
+	menu->insertAction(NULL, PuMP_MainWindow::zoomInAction);
+	menu->insertAction(NULL, PuMP_MainWindow::zoomOutAction);
 	menu->addSeparator();
-	menu->insertAction(NULL, refreshAction);
-	menu->insertAction(NULL, stopAction);
-	menu = menuBar()->addMenu("&Go");
-	menu->insertAction(NULL, previousAction);
-	menu->insertAction(NULL, nextAction);
-	menu->insertAction(NULL, homeAction);
+	menu->insertAction(NULL, PuMP_MainWindow::refreshAction);
+	menu->insertAction(NULL, PuMP_MainWindow::stopAction);
+	menu = menuBar()->addMenu("&Go to");
+	menu->insertAction(NULL, PuMP_MainWindow::backwardAction);
+	menu->insertAction(NULL, PuMP_MainWindow::forwardAction);
+	menu->insertAction(NULL, PuMP_MainWindow::homeAction);
+	menu->addSeparator();
+	menu->insertAction(NULL, PuMP_MainWindow::previousAction);
+	menu->insertAction(NULL, PuMP_MainWindow::nextAction);	
 	menu = menuBar()->addMenu("&Help");
-	menu->insertAction(NULL, aboutQtAction);
-	menu->insertAction(NULL, aboutAction);
+	menu->insertAction(NULL, PuMP_MainWindow::aboutQtAction);
+	menu->insertAction(NULL, PuMP_MainWindow::aboutAction);
 
 	// setup statusbar
 	progressBar.setMinimum(0);
@@ -162,10 +180,6 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
 	resize(QSize(640, 480));
-	
-//	// test
-//	configDialog dialog(this);
-//	dialog.exec();
 }
 
 /**
@@ -176,25 +190,27 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete directoryView;
 	delete imageView;
 
-	delete aboutAction;
-	delete aboutQtAction;
-	delete addAction;
-	delete closeAction;
-	delete exitAction;
-	delete forceExitAction;
-	delete homeAction;
-	delete mirrorHAction;
-	delete mirrorVAction;
-	delete nextAction;
-	delete previousAction;
-	delete refreshAction;
-	delete rotateCWAction;
-	delete rotateCCWAction;
-	delete sizeOriginalAction;
-	delete sizeFittedAction;
-	delete stopAction;
-	delete zoomInAction;
-	delete zoomOutAction;
+	delete PuMP_MainWindow::aboutAction;
+	delete PuMP_MainWindow::aboutQtAction;
+	delete PuMP_MainWindow::addAction;
+	delete PuMP_MainWindow::backwardAction;
+	delete PuMP_MainWindow::closeAction;
+	delete PuMP_MainWindow::exitAction;
+	delete PuMP_MainWindow::forceExitAction;
+	delete PuMP_MainWindow::forwardAction;
+	delete PuMP_MainWindow::homeAction;
+	delete PuMP_MainWindow::mirrorHAction;
+	delete PuMP_MainWindow::mirrorVAction;
+	delete PuMP_MainWindow::nextAction;
+	delete PuMP_MainWindow::previousAction;
+	delete PuMP_MainWindow::refreshAction;
+	delete PuMP_MainWindow::rotateCWAction;
+	delete PuMP_MainWindow::rotateCCWAction;
+	delete PuMP_MainWindow::sizeOriginalAction;
+	delete PuMP_MainWindow::sizeFittedAction;
+	delete PuMP_MainWindow::stopAction;
+	delete PuMP_MainWindow::zoomInAction;
+	delete PuMP_MainWindow::zoomOutAction;
 }
 
 /**
@@ -222,118 +238,164 @@ void PuMP_MainWindow::getSupportedImageFormats()
  */
 void PuMP_MainWindow::setupActions()
 {
-	aboutAction = new QAction(/*QIcon(), */"About", this);
-	aboutAction->setToolTip("Show information about PuMP.");
-	connect(aboutAction, SIGNAL(triggered()), this, SLOT(on_about()));
+	PuMP_MainWindow::aboutAction = new QAction(/*QIcon(), */"About", this);
+	PuMP_MainWindow::aboutAction->setToolTip("Show information about PuMP.");
+	connect(
+		PuMP_MainWindow::aboutAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_about()));
 	
-	aboutQtAction = new QAction(/*QIcon(), */"About Qt", this);
-	aboutAction->setToolTip("Show information about Qt.");
-	connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+	PuMP_MainWindow::aboutQtAction = new QAction("About Qt", this);
+	PuMP_MainWindow::aboutQtAction->setToolTip("Show information about Qt.");
+	connect(
+		PuMP_MainWindow::aboutQtAction,
+		SIGNAL(triggered()),
+		qApp,
+		SLOT(aboutQt()));
 
-	addAction = new QAction(QIcon(":/tab_new.png"), "Add new tab", this);
-	addAction->setToolTip("Add a new tab.");
+	PuMP_MainWindow::addAction = new QAction(
+		QIcon(":/tab_new.png"),
+		"Add new tab",
+		this);
+	PuMP_MainWindow::addAction->setToolTip("Add a new tab.");
 	
-	closeAction = new QAction(QIcon(":/tab_remove.png"), "Close tab", this);
-	closeAction->setToolTip("Close the current tab.");
-	closeAction->setEnabled(false);
-
-	exitAction = new QAction("Exit", this);
-	exitAction->setToolTip("Close and exit PuMP.");
-	connect(exitAction, SIGNAL(triggered()), this, SLOT(close()));
+	PuMP_MainWindow::backwardAction = new QAction(
+		QIcon(":/back.png"),
+		"Last directory",
+		this);
+	PuMP_MainWindow::backwardAction->setToolTip("Got to the last directory.");
 	
-	forceExitAction = new QAction("Quit", this);
-	forceExitAction->setToolTip("Exit PuMP ungracefully.");
-	connect(forceExitAction, SIGNAL(triggered()), this, SLOT(on_forceExit()));
+	PuMP_MainWindow::closeAction = new QAction(
+		QIcon(":/tab_remove.png"),
+		"Close tab",
+		this);
+	PuMP_MainWindow::closeAction->setToolTip("Close the current tab.");
+	PuMP_MainWindow::closeAction->setEnabled(false);
 
-	homeAction = new QAction(QIcon(":/gohome.png"), "Home", this);
-	homeAction->setToolTip("Got to the home directory");
+	PuMP_MainWindow::exitAction = new QAction(
+		QIcon(":/exit.png"),
+		"Exit",
+		this);
+	PuMP_MainWindow::exitAction->setToolTip("Close and exit PuMP.");
+	connect(
+		PuMP_MainWindow::exitAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(close()));
+	
+	PuMP_MainWindow::forceExitAction = new QAction("Quit", this);
+	PuMP_MainWindow::forceExitAction->setToolTip("Exit PuMP ungracefully.");
+	connect(
+		PuMP_MainWindow::forceExitAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_forceExit()));
 
-	mirrorHAction = new QAction(
+	PuMP_MainWindow::forwardAction = new QAction(
+		QIcon(":/forward.png"),
+		"Next directory",
+		this);
+	PuMP_MainWindow::forwardAction->setToolTip("Got to the next directory.");
+
+	PuMP_MainWindow::homeAction = new QAction(
+		QIcon(":/gohome.png"),
+		"Home",
+		this);
+	PuMP_MainWindow::homeAction->setToolTip("Got to the home directory");
+
+	PuMP_MainWindow::mirrorHAction = new QAction(
 		QIcon(":/hmirror.png"),
 		"Mirror image horizontally",
 		this);
-	mirrorHAction->setToolTip("Mirror the current image horizontally.");
-	mirrorHAction->setEnabled(false);
+	PuMP_MainWindow::mirrorHAction->setToolTip("Mirror the current image " \
+		"horizontally.");
+	PuMP_MainWindow::mirrorHAction->setEnabled(false);
 
-	mirrorVAction = new QAction(
+	PuMP_MainWindow::mirrorVAction = new QAction(
 		QIcon(":/vmirror.png"),
 		"Mirror image vertically",
 		this);
-	mirrorVAction->setToolTip("Mirror the current image vertically.");
-	mirrorVAction->setEnabled(false);
+	PuMP_MainWindow::mirrorVAction->setToolTip("Mirror the current image " \
+		"vertically.");
+	PuMP_MainWindow::mirrorVAction->setEnabled(false);
 
-	nextAction = new QAction(QIcon(":/forward.png"), "Next directory", this);
-	nextAction->setToolTip("Got to the next directory.");
-
-	previousAction = new QAction(
-		QIcon(":/back.png"),
-		"Previous directory",
+	PuMP_MainWindow::nextAction = new QAction(
+		QIcon(":/next.png"),
+		"Next Image",
 		this);
-	previousAction->setToolTip("Go to the previous directory.");
+	PuMP_MainWindow::nextAction->setToolTip("Got to the next image.");
 
-	refreshAction = new QAction(QIcon(":/reload.png"), "Refresh", this);
-	refreshAction->setToolTip("Refresh the current directory.");
+	PuMP_MainWindow::previousAction = new QAction(
+		QIcon(":/previous.png"),
+		"Previous image",
+		this);
+	PuMP_MainWindow::previousAction->setToolTip("Go to the previous image.");
 
-	rotateCCWAction = new QAction(
+	PuMP_MainWindow::refreshAction = new QAction(
+		QIcon(":/reload.png"),
+		"Refresh",
+		this);
+	PuMP_MainWindow::refreshAction->setToolTip("Refresh the current " \
+		"directory.");
+
+	PuMP_MainWindow::rotateCCWAction = new QAction(
 		QIcon(":/rotate_ccw.png"),
 		"Rotate image counter-clockwise",
 		this);
-	rotateCCWAction->setToolTip("Rotate the current image counter-clockwise.");
-	rotateCCWAction->setEnabled(false);
+	PuMP_MainWindow::rotateCCWAction->setToolTip("Rotate the current image " \
+		"counter-clockwise.");
+	PuMP_MainWindow::rotateCCWAction->setEnabled(false);
 
-	rotateCWAction = new QAction(
+	PuMP_MainWindow::rotateCWAction = new QAction(
 		QIcon(":/rotate_cw.png"),
 		"Rotate image clockwise",
 		this);
-	rotateCWAction->setToolTip("Rotate the current image clockwise.");
-	rotateCWAction->setEnabled(false);
+	PuMP_MainWindow::rotateCWAction->setToolTip("Rotate the current image " \
+		"clockwise.");
+	PuMP_MainWindow::rotateCWAction->setEnabled(false);
 
-	sizeOriginalAction = new QAction(
+	PuMP_MainWindow::sizeOriginalAction = new QAction(
 		QIcon(":/viewmag1.png"),
 		"Display image in original size",
 		this);
-	sizeOriginalAction->setToolTip("Display the current image in original size.");
-	sizeOriginalAction->setEnabled(false);
+	PuMP_MainWindow::sizeOriginalAction->setToolTip("Display the current " \
+		"image in original size.");
+	PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
 
-	sizeFittedAction = new QAction(
+	PuMP_MainWindow::sizeFittedAction = new QAction(
 		QIcon(":/viewmagfit.png"),
 		"Display image fitted to window",
 		this);
-	sizeFittedAction->setToolTip("Display the current image fitted to window.");
-	sizeFittedAction->setEnabled(false);
+	PuMP_MainWindow::sizeFittedAction->setToolTip("Display the current " \
+		"image fitted to window.");
+	PuMP_MainWindow::sizeFittedAction->setEnabled(false);
 
-	stopAction = new QAction(QIcon(":/stop.png"), "Stop refresh", this);
-	stopAction->setToolTip("Stop refreshing the current directory.");
-	stopAction->setEnabled(false);
+	PuMP_MainWindow::stopAction = new QAction(
+		QIcon(":/stop.png"),
+		"Stop refresh",
+		this);
+	PuMP_MainWindow::stopAction->setToolTip("Stop refreshing the current " \
+		"directory.");
+	PuMP_MainWindow::stopAction->setEnabled(false);
 
-	zoomInAction = new QAction(QIcon(":/viewmag+.png"), "Zoom in", this);
-	zoomInAction->setToolTip("Zoom in current image.");
-	zoomInAction->setEnabled(false);
+	PuMP_MainWindow::zoomInAction = new QAction(
+		QIcon(":/viewmag+.png"),
+		"Zoom in",
+		this);
+	PuMP_MainWindow::zoomInAction->setToolTip("Zoom in current image.");
+	PuMP_MainWindow::zoomInAction->setEnabled(false);
 
-	zoomOutAction = new QAction(QIcon(":/viewmag-.png"), "Zoom out", this);
-	zoomOutAction->setToolTip("Zoom out current image.");
-	zoomOutAction->setEnabled(false);
-	
-	assert(directoryView != NULL);
-	assert(imageView != NULL);
-	directoryView->setupActions(refreshAction, stopAction);
-	imageView->setupActions(
-		addAction,
-		closeAction,
-		mirrorHAction,
-		mirrorVAction,
-		refreshAction,
-		rotateCWAction,
-		rotateCCWAction,
-		sizeOriginalAction,
-		sizeFittedAction,
-		stopAction,
-		zoomInAction,
-		zoomOutAction);
+	PuMP_MainWindow::zoomOutAction = new QAction(
+		QIcon(":/viewmag-.png"),
+		"Zoom out",
+		this);
+	PuMP_MainWindow::zoomOutAction->setToolTip("Zoom out current image.");
+	PuMP_MainWindow::zoomOutAction->setEnabled(false);	
 }
 
 /**
- * Function that shows PuMP's about-dialog.
+ * Slot-function that shows PuMP's about-dialog.
  */
 void PuMP_MainWindow::on_about()
 {
@@ -341,7 +403,7 @@ void PuMP_MainWindow::on_about()
 }
 
 /**
- * Function that forces PuMP to exit immediatelly.
+ * Slot-function that forces PuMP to exit immediatelly.
  */
 void PuMP_MainWindow::on_forceExit()
 {

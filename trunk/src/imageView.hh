@@ -42,41 +42,17 @@ class PuMP_ImageView : public QTabWidget
 	protected:
 		PuMP_Overview *overview;
 
-		QAction *addAction;
-		QAction *closeAction;
-		QAction *closeAllAction;
-		QAction *closeOthersAction;
-		QAction *mirrorHAction;
-		QAction *mirrorVAction;
-		QAction *rotateCWAction;
-		QAction *rotateCCWAction;
-		QAction *sizeOriginalAction;
-		QAction *sizeFittedAction;
-		QAction *zoomInAction;
-		QAction *zoomOutAction;
-		
 		QMap<QString, QFileInfo> infos;
 		QMap<QString, PuMP_DisplayView *> tabs;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
 	
 	public:
+		static QAction *closeAllAction;
+		static QAction *closeOthersAction;
+
 		PuMP_ImageView(QStringList &nameFilters, QWidget *parent = 0);
 		~PuMP_ImageView();
-		
-		void setupActions(
-			QAction *addAction,
-			QAction *closeAction,
-			QAction *mirrorHAction,
-			QAction *mirrorVAction,
-			QAction *refreshAction,
-			QAction *rotateCWAction,
-			QAction *rotateCCWAction,
-			QAction *sizeOriginalAction,
-			QAction *sizeFittedAction,
-			QAction *stopAction,
-			QAction *zoomInAction,
-			QAction *zoomOutAction);
 	
 	public slots:
 		void on_addAction_triggered();
@@ -86,8 +62,6 @@ class PuMP_ImageView : public QTabWidget
 		void on_mirrorHAction();
 		void on_mirrorVAction();
 		void on_openImage(const QFileInfo &info, bool newTab);
-		void on_openDir(const QFileInfo &info);
-		void on_overview_dirOpened(const QFileInfo &info);
 		void on_rotateCWAction();
 		void on_rotateCCWAction();
 		void on_sizeOriginalAction();
@@ -101,7 +75,6 @@ class PuMP_ImageView : public QTabWidget
 		void on_closeOthersAction_triggered();
 	
 	signals:
-		void dirOpened(const QFileInfo &info);
 		void updateStatusBar(int value, const QString &text);
 };
 
