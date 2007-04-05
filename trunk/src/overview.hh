@@ -129,12 +129,14 @@ class PuMP_Overview : public QListView
 		QList<QFileInfo> current;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
+		void currentChanged(
+			const QModelIndex &current,
+			const QModelIndex &previous);
 	
 	public:
 		static QAction *openAction;
-		static QAction *openInNewTabAction;
 
-		PuMP_Overview(QStringList &nameFilters, QWidget *parent = 0);
+		PuMP_Overview(QWidget *parent = 0);
 		~PuMP_Overview();
 		
 	public slots:

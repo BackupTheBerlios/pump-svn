@@ -52,16 +52,17 @@ class PuMP_ImageView : public QTabWidget
 		static QAction *closeAllAction;
 		static QAction *closeOthersAction;
 
-		PuMP_ImageView(QStringList &nameFilters, QWidget *parent = 0);
+		PuMP_ImageView(QWidget *parent = 0);
 		~PuMP_ImageView();
 	
 	public slots:
-		void on_addAction_triggered();
 		void on_closeAction_triggered();
 		void on_currentChanged(int index); 
 		void on_displayView_loadingError(PuMP_DisplayView *view = NULL);
 		void on_mirrorHAction();
 		void on_mirrorVAction();
+		void on_nextAction();
+		void on_previousAction();
 		void on_openImage(const QFileInfo &info, bool newTab);
 		void on_rotateCWAction();
 		void on_rotateCCWAction();

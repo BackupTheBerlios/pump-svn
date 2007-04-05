@@ -46,7 +46,6 @@ class PuMP_MainWindow : public QMainWindow
 		
 		QLabel progressBarLabel;
 		QProgressBar progressBar;
-		QStringList nameFilters;
 		QToolBar toolBar;
 		
 		void getSupportedImageFormats();
@@ -55,7 +54,6 @@ class PuMP_MainWindow : public QMainWindow
 	public:
 		static QAction *aboutAction;
 		static QAction *aboutQtAction;
-		static QAction *addAction;
 		static QAction *backwardAction;
 		static QAction *closeAction;
 		static QAction *exitAction;
@@ -65,6 +63,7 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *mirrorHAction;
 		static QAction *mirrorVAction;
 		static QAction *nextAction;
+		static QAction *openInNewTabAction;
 		static QAction *parentAction;
 		static QAction *previousAction;
 		static QAction *refreshAction;
@@ -75,6 +74,8 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *stopAction;
 		static QAction *zoomInAction;
 		static QAction *zoomOutAction;
+		
+		static QStringList nameFilters;
 
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
 		~PuMP_MainWindow();

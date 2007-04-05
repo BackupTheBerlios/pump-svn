@@ -42,10 +42,7 @@ QAction *PuMP_DirectoryView::openInNewTabAction = NULL;
  * @param	nameFilters	A string-list containing the extensions to display.
  * @param	parent		The parent-widget to this view. 
  */
-PuMP_DirectoryView::PuMP_DirectoryView(
-	const QStringList &nameFilters,
-	QWidget *parent)
-	: QTreeView(parent)
+PuMP_DirectoryView::PuMP_DirectoryView(QWidget *parent)	: QTreeView(parent)
 {
 	historyCurrent = 0;
 
@@ -55,7 +52,7 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 		QDir::Drives |
 		QDir::NoDotAndDotDot |
 		QDir::Readable);
-	model.setNameFilters(nameFilters);
+	model.setNameFilters(PuMP_MainWindow::nameFilters);
 	model.setParent(this);
 	model.setSorting(QDir::Name | QDir::DirsFirst);
 	

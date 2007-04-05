@@ -23,6 +23,8 @@
 
 #include <QContextMenuEvent>
 #include <QDebug>
+#include <QDir>
+#include <QList>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
@@ -79,6 +81,8 @@ PuMP_Display::PuMP_Display(const QFileInfo &info, QWidget *parent)
 	resize(200, 200);
 	setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 
+	hasNext = false;
+	hasPrevious = false;
 	mirroredHorizontal = false;
 	mirroredVertical = false;
 	rotation = 0;
@@ -302,13 +306,53 @@ QString PuMP_DisplayView::filePath() const
 }
 
 /**
+ * Function that returns a file-info-object pointing to the current images
+ * successor in its directory.
+ * @param	previous	Flag indicating if the successor should be the next
+ * 						or the previous entry.
+ * @return	A file-info object pointing on the demanded successor, an empty
+ * 			file-info-object, if current has none.
+ */
+QFileInfo PuMP_DisplayView::getSuccessor(bool previous) const
+{
+	QFileInfo succ;
+	if(previous && !display.hasPrevious) return succ;
+	if(!previous && !display.hasNext) return succ;
+
+	QList<QFileInfo> list = info.dir().entryInfoList(
+		PuMP_MainWindow::nameFilters, QDir::Files);
+	int index = list.indexOf(info);
+	if(previous && index == 0) return succ;
+	if(!previous && index == (list.size() - 1)) return succ;
+	
+	if(previous) index--;
+	else index++;
+	
+	succ = list.at(index);
+	return succ;
+}
+
+/**
  * Function to set the image displayed by this view.
  * @param	info	The QFileInfo-Object representing the image to show.
  */
 void PuMP_DisplayView::setImage(const QFileInfo &info)
 {
+	display.mirroredHorizontal = false;
+	display.mirroredVertical = false;
+	display.rotation = 0;
+	display.scaled = false;
+	display.sizeOriginal = true;
+	display.zoom = DEFAULT_ZOOM;
+
 	this->info = info;
 	display.loader.load(this->info);
+	
+	QList<QFileInfo> list = this->info.dir().entryInfoList(
+		PuMP_MainWindow::nameFilters, QDir::Files);
+	int index = list.indexOf(this->info);
+	display.hasNext = (index < (list.size() - 1));
+	display.hasPrevious = (index > 0);
 }
 
 /**

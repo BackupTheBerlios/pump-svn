@@ -45,10 +45,9 @@ QAction *PuMP_ImageView::closeOthersAction = NULL;
  * 						application can handle.
  * @param	parent		Pointer on this widgets parent-widget.
  */
-PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
-	: QTabWidget(parent)
+PuMP_ImageView::PuMP_ImageView(QWidget *parent)	: QTabWidget(parent)
 {
-	overview = new PuMP_Overview(nameFilters, parent);
+	overview = new PuMP_Overview(parent);
 	connect(
 		overview,
 		SIGNAL(openImage(const QFileInfo &, bool)),
@@ -67,11 +66,6 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
 		this,
 		SLOT(on_currentChanged(int)));
 
-	connect(
-		PuMP_MainWindow::addAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_addAction_triggered()));
 	connect(
 		PuMP_MainWindow::closeAction,
 		SIGNAL(triggered()),
@@ -99,6 +93,16 @@ PuMP_ImageView::PuMP_ImageView(QStringList &nameFilters, QWidget *parent)
 		SIGNAL(triggered()),
 		this,
 		SLOT(on_mirrorVAction()));
+	connect(
+		PuMP_MainWindow::nextAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_nextAction()));
+	connect(
+		PuMP_MainWindow::previousAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_previousAction()));
 	connect(
 		PuMP_MainWindow::rotateCWAction,
 		SIGNAL(triggered()),
@@ -220,14 +224,6 @@ void PuMP_ImageView::zoom(PuMP_DisplayView *view, int step)
 }
 
 /**
- * Slot-function that is called, when a new tab should be opened.
- */
-void PuMP_ImageView::on_addAction_triggered()
-{
-	
-}
-
-/**
  * Slot-function that is called when the user demands to close the current tab.
  * The overview can't be closed.
  */
@@ -254,6 +250,7 @@ void PuMP_ImageView::on_closeAction_triggered()
 /**
  * Slot-function that is called, when the current tabs changed. It sets up the
  * actions states for the new current tab.
+ * @param	index The index of the new current tab.
  */
 void PuMP_ImageView::on_currentChanged(int index)
 {
@@ -261,12 +258,13 @@ void PuMP_ImageView::on_currentChanged(int index)
 	if(cw == NULL || tabs.size() == 0 || cw == overview)
 	{
 		bool enable = (tabs.size() != 0);
-		PuMP_MainWindow::addAction->setEnabled(true);
 		PuMP_MainWindow::closeAction->setEnabled(false);
 		PuMP_ImageView::closeAllAction->setEnabled(enable);
 		PuMP_ImageView::closeOthersAction->setEnabled(enable);
 		PuMP_MainWindow::mirrorHAction->setEnabled(false);
 		PuMP_MainWindow::mirrorVAction->setEnabled(false);
+		PuMP_MainWindow::nextAction->setEnabled(false);
+		PuMP_MainWindow::previousAction->setEnabled(false);
 		PuMP_MainWindow::rotateCWAction->setEnabled(false);
 		PuMP_MainWindow::rotateCCWAction->setEnabled(false);
 		PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
@@ -279,12 +277,13 @@ void PuMP_ImageView::on_currentChanged(int index)
 		bool enable = (tabs.size() != 1);
 		PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
 		
-		PuMP_MainWindow::addAction->setEnabled(true);
 		PuMP_MainWindow::closeAction->setEnabled(true);
 		PuMP_ImageView::closeAllAction->setEnabled(true);
 		PuMP_ImageView::closeOthersAction->setEnabled(enable);
 		PuMP_MainWindow::mirrorHAction->setEnabled(true);
 		PuMP_MainWindow::mirrorVAction->setEnabled(true);
+		PuMP_MainWindow::nextAction->setEnabled(view->display.hasNext);
+		PuMP_MainWindow::previousAction->setEnabled(view->display.hasPrevious);
 		PuMP_MainWindow::rotateCWAction->setEnabled(true);
 		PuMP_MainWindow::rotateCCWAction->setEnabled(true);
 		PuMP_MainWindow::sizeOriginalAction->setEnabled(view->display.scaled);
@@ -357,6 +356,67 @@ void PuMP_ImageView::on_mirrorVAction()
 }
 
 /**
+ * Slot-function that is called when the go-to-next-image-action was triggered.
+ */
+void PuMP_ImageView::on_nextAction()
+{
+	QWidget *cw = currentWidget();
+	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+	
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	QFileInfo info = view->getSuccessor();
+	if(!info.exists()) return;
+	
+	QMap<QString, PuMP_DisplayView *>::iterator it;
+	it = tabs.find(info.filePath());
+	if(it != tabs.end()) setCurrentWidget(it.value());
+	else
+	{
+		infos.remove(view->filePath());
+		infos[info.filePath()] = info;
+		
+		tabs.remove(view->filePath());
+		tabs[info.filePath()] = view;
+		
+		view->setImage(info);
+		setTabText(currentIndex(), info.fileName());
+		setTabToolTip(currentIndex(), info.filePath());
+		on_currentChanged(currentIndex());
+	}
+}
+
+/**
+ * Slot-function that is called when the go-to-previous-image-action
+ * was triggered.
+ */
+void PuMP_ImageView::on_previousAction()
+{
+	QWidget *cw = currentWidget();
+	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+	
+	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
+	QFileInfo info = view->getSuccessor(true);
+	if(!info.exists()) return;
+	
+	QMap<QString, PuMP_DisplayView *>::iterator it;
+	it = tabs.find(info.filePath());
+	if(it != tabs.end()) setCurrentWidget(it.value());
+	else
+	{
+		infos.remove(view->filePath());
+		infos[info.filePath()] = info;
+		
+		tabs.remove(view->filePath());
+		tabs[info.filePath()] = view;
+		
+		view->setImage(info);
+		setTabText(currentIndex(), info.fileName());
+		setTabToolTip(currentIndex(), info.filePath());
+		on_currentChanged(currentIndex());
+	}
+}
+
+/**
  * Slot-function that displays the given image in the current-tab or in a
  * new tab.
  * @param	info	The image to load.
@@ -373,7 +433,13 @@ void PuMP_ImageView::on_openImage(const QFileInfo &info, bool newTab)
 		return;
 	}
 	
-	if(tabs.find(info.filePath()) != tabs.end()) return;
+	QMap<QString, PuMP_DisplayView *>::iterator it;
+	it = tabs.find(info.filePath());
+	if(it != tabs.end())
+	{
+		setCurrentWidget(it.value());
+		return;
+	}
 
 	if(tabs.size() == 0 || newTab)
 	{

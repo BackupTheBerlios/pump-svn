@@ -66,6 +66,8 @@ class PuMP_Display : public QWidget
 		void paintEvent(QPaintEvent *event);
 	
 	public:
+		bool hasNext;
+		bool hasPrevious;
 		bool mirroredHorizontal;
 		bool mirroredVertical;
 		int rotation;
@@ -113,6 +115,7 @@ class PuMP_DisplayView : public QScrollArea
 		
 		QString fileName() const;
 		QString filePath() const;
+		QFileInfo getSuccessor(bool previous = false) const;
 
 		void setImage(const QFileInfo &info);
 

@@ -43,7 +43,6 @@
 /** init static action-pointers */
 QAction *PuMP_MainWindow::aboutAction = NULL;
 QAction *PuMP_MainWindow::aboutQtAction = NULL;
-QAction *PuMP_MainWindow::addAction = NULL;
 QAction *PuMP_MainWindow::backwardAction = NULL;
 QAction *PuMP_MainWindow::closeAction = NULL;
 QAction *PuMP_MainWindow::exitAction = NULL;
@@ -53,6 +52,7 @@ QAction *PuMP_MainWindow::homeAction = NULL;
 QAction *PuMP_MainWindow::mirrorHAction = NULL;
 QAction *PuMP_MainWindow::mirrorVAction = NULL;
 QAction *PuMP_MainWindow::nextAction = NULL;
+QAction *PuMP_MainWindow::openInNewTabAction = NULL;
 QAction *PuMP_MainWindow::parentAction = NULL;
 QAction *PuMP_MainWindow::previousAction = NULL;
 QAction *PuMP_MainWindow::refreshAction = NULL;
@@ -63,6 +63,9 @@ QAction *PuMP_MainWindow::sizeFittedAction = NULL;
 QAction *PuMP_MainWindow::stopAction = NULL;
 QAction *PuMP_MainWindow::zoomInAction = NULL;
 QAction *PuMP_MainWindow::zoomOutAction = NULL;
+
+/** init static string-list */
+QStringList PuMP_MainWindow::nameFilters;
 
 /**
  * Constructor of class PuMP_MainWindow that allocates all needed components,
@@ -86,8 +89,8 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	setCentralWidget(cWidget);
 	
 	// treeview for filesystem & imageview for images and overview
-	directoryView = new PuMP_DirectoryView(nameFilters, cWidget);
-	imageView = new PuMP_ImageView(nameFilters, cWidget);
+	directoryView = new PuMP_DirectoryView(cWidget);
+	imageView = new PuMP_ImageView(cWidget);
 	hBoxLayout->addWidget(directoryView);
 	hBoxLayout->addWidget(imageView);
 
@@ -116,7 +119,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.insertAction(NULL, PuMP_MainWindow::refreshAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::stopAction);
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, PuMP_MainWindow::addAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::openInNewTabAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::closeAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::previousAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::nextAction);	
@@ -136,7 +139,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	// setup menubar
 	QMenu *menu = NULL;
 	menu = menuBar()->addMenu("&File");
-	menu->insertAction(NULL, PuMP_MainWindow::addAction);
+	menu->insertAction(NULL, PuMP_MainWindow::openInNewTabAction);
 	menu->insertAction(NULL, PuMP_MainWindow::closeAction);
 	menu->addSeparator();
 	menu->insertAction(NULL, PuMP_MainWindow::forceExitAction);
@@ -198,7 +201,6 @@ PuMP_MainWindow::~PuMP_MainWindow()
 
 	delete PuMP_MainWindow::aboutAction;
 	delete PuMP_MainWindow::aboutQtAction;
-	delete PuMP_MainWindow::addAction;
 	delete PuMP_MainWindow::backwardAction;
 	delete PuMP_MainWindow::closeAction;
 	delete PuMP_MainWindow::exitAction;
@@ -208,6 +210,7 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete PuMP_MainWindow::mirrorHAction;
 	delete PuMP_MainWindow::mirrorVAction;
 	delete PuMP_MainWindow::nextAction;
+	delete PuMP_MainWindow::openInNewTabAction;
 	delete PuMP_MainWindow::parentAction;
 	delete PuMP_MainWindow::previousAction;
 	delete PuMP_MainWindow::refreshAction;
@@ -232,11 +235,12 @@ void PuMP_MainWindow::getSupportedImageFormats()
 	
 	int index;
 	for(index = 0; index < formats.size(); index++)
-		nameFilters << QString(formats[index].prepend(prefix).data());
+		PuMP_MainWindow::nameFilters <<
+			QString(formats[index].prepend(prefix).data());
 	
 	qDebug() << "supported formats:";
-	for(index = 0; index < nameFilters.size(); index++)
-		qDebug() << nameFilters[index]; 
+	for(index = 0; index < PuMP_MainWindow::nameFilters.size(); index++)
+		qDebug() << PuMP_MainWindow::nameFilters[index]; 
 }
 
 /**
@@ -261,12 +265,6 @@ void PuMP_MainWindow::setupActions()
 		qApp,
 		SLOT(aboutQt()));
 
-	PuMP_MainWindow::addAction = new QAction(
-		QIcon(":/tab_new.png"),
-		"Add new tab",
-		this);
-	PuMP_MainWindow::addAction->setToolTip("Add a new tab.");
-	
 	PuMP_MainWindow::backwardAction = new QAction(
 		QIcon(":/back.png"),
 		"Last directory",
@@ -336,6 +334,14 @@ void PuMP_MainWindow::setupActions()
 		this);
 	PuMP_MainWindow::nextAction->setToolTip("Got to the next image.");
 	PuMP_MainWindow::nextAction->setEnabled(false);
+
+	PuMP_MainWindow::openInNewTabAction = new QAction(
+		QIcon(":/tab_new.png"),
+		"Open in new tab",
+		this);
+	PuMP_MainWindow::openInNewTabAction->setToolTip(
+		"Open selected image in a new tab.");
+	PuMP_MainWindow::openInNewTabAction->setEnabled(false);
 	
 	PuMP_MainWindow::parentAction = new QAction(
 		QIcon(":/up.png"),

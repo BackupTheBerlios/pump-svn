@@ -339,7 +339,6 @@ bool PuMP_OverviewLoader::wasKilled()
 
 /** init static actions */
 QAction *PuMP_Overview::openAction = NULL;
-QAction *PuMP_Overview::openInNewTabAction = NULL;
 
 /**
  * Constructor of class PuMP_Overview which is basically a QListView to
@@ -348,10 +347,7 @@ QAction *PuMP_Overview::openInNewTabAction = NULL;
  * 						application can handle.
  * @param	parent		The parent-widget of this object.
  */
-PuMP_Overview::PuMP_Overview(
-	QStringList &nameFilters,
-	QWidget *parent)
-	: QListView(parent)
+PuMP_Overview::PuMP_Overview(QWidget *parent) : QListView(parent)
 {
 	progress = 0;
 	progressMax = 1;
@@ -362,12 +358,8 @@ PuMP_Overview::PuMP_Overview(
 		SIGNAL(triggered()),
 		this,
 		SLOT(on_openAction_triggered()));
-	PuMP_Overview::openInNewTabAction = new QAction(
-		QIcon(":/tab_new.png"),
-		"Open in new tab",
-		this);
 	connect(
-		PuMP_Overview::openInNewTabAction,
+		PuMP_MainWindow::openInNewTabAction,
 		SIGNAL(triggered()),
 		this,
 		SLOT(on_openInNewTabAction_triggered()));
@@ -405,7 +397,7 @@ PuMP_Overview::PuMP_Overview(
 			const QImage &,
 			bool)));
 	
-	dir.setNameFilters(nameFilters);
+	dir.setNameFilters(PuMP_MainWindow::nameFilters);
 	
 	setViewMode(QListView::ListMode);
 	setFlow(QListView::LeftToRight);
@@ -434,7 +426,6 @@ PuMP_Overview::PuMP_Overview(
 PuMP_Overview::~PuMP_Overview()
 {
 	delete PuMP_Overview::openAction;
-	delete PuMP_Overview::openInNewTabAction;
 
 	on_stop();
 	model.clear();
@@ -455,16 +446,31 @@ void PuMP_Overview::contextMenuEvent(QContextMenuEvent *e)
 	if(!info.exists()) show = false;
 	
 	PuMP_Overview::openAction->setEnabled(show);
-	PuMP_Overview::openInNewTabAction->setEnabled(!info.isDir() && show);
+	PuMP_MainWindow::openInNewTabAction->setEnabled(!info.isDir() && show);
 	PuMP_MainWindow::refreshAction->setEnabled(dir.exists());
 
 	QMenu menu(this);
 	menu.addAction(PuMP_Overview::openAction);
-	menu.addAction(PuMP_Overview::openInNewTabAction);
+	menu.addAction(PuMP_MainWindow::openInNewTabAction);
 	menu.addSeparator();
 	menu.addAction(PuMP_MainWindow::refreshAction);
 	menu.addAction(PuMP_MainWindow::stopAction);
 	menu.exec(e->globalPos());
+}
+
+/**
+ * Slot-function that is called when the current index changes.
+ * @param	current		The new current index.
+ * @param	previous	The old index.
+ */
+void PuMP_Overview::currentChanged(
+	const QModelIndex &current,
+	const QModelIndex &previous)
+{
+	Q_UNUSED(previous);
+	QFileInfo info(dir.absoluteFilePath(model.getFileName(current)));
+	PuMP_MainWindow::openInNewTabAction->setEnabled(
+		info.exists() && !info.isDir());
 }
 
 /**

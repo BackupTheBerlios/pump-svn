@@ -26,7 +26,6 @@
 #include <QDirModel>
 #include <QFileInfo>
 #include <QList>
-#include <QStringList>
 #include <QTreeView>
 
 /*****************************************************************************/
@@ -48,9 +47,7 @@ class PuMP_DirectoryView : public QTreeView
 		static QAction *openAction;
 		static QAction *openInNewTabAction;
 
-		PuMP_DirectoryView(
-			const QStringList &nameFilters,
-			QWidget *parent = 0);
+		PuMP_DirectoryView(QWidget *parent = 0);
 		~PuMP_DirectoryView();
 	
 	protected slots:
