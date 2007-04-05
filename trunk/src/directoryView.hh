@@ -25,6 +25,7 @@
 #include <QAction>
 #include <QDirModel>
 #include <QFileInfo>
+#include <QList>
 #include <QStringList>
 #include <QTreeView>
 
@@ -35,8 +36,12 @@ class PuMP_DirectoryView : public QTreeView
 	Q_OBJECT
 
 	protected:
+		int historyCurrent;
+
 		QDirModel model;
+		QList<QFileInfo> history;
 		
+		void appendToHistory(const QFileInfo &info);
 		void contextMenuEvent(QContextMenuEvent *e);
 	
 	public:
@@ -54,8 +59,12 @@ class PuMP_DirectoryView : public QTreeView
 		void on_collapsedOrExpanded(const QModelIndex &index);
 	
 	public slots:
+		void on_backwardAction_triggered();
+		void on_forwardAction_triggered();
+		void on_homeAction_triggered();
 		void on_openAction_triggered();
 		void on_openInNewTabAction_triggered();
+		void on_parentAction_triggered();
 		void on_refreshAction_triggered();
 	
 	signals:

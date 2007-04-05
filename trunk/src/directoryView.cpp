@@ -23,6 +23,7 @@
 
 #include <QContextMenuEvent>
 #include <QDebug>
+#include <QDir>
 #include <QMenu>
 
 #include "directoryView.hh"
@@ -46,6 +47,8 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 	QWidget *parent)
 	: QTreeView(parent)
 {
+	historyCurrent = 0;
+
 	model.setFilter(
 		QDir::AllDirs |
 		QDir::Files |
@@ -76,6 +79,26 @@ PuMP_DirectoryView::PuMP_DirectoryView(
 		SIGNAL(triggered()),
 		this,
 		SLOT(on_openInNewTabAction_triggered()));
+	connect(
+		PuMP_MainWindow::backwardAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_backwardAction_triggered()));
+	connect(
+		PuMP_MainWindow::forwardAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_forwardAction_triggered()));
+	connect(
+		PuMP_MainWindow::homeAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_homeAction_triggered()));
+	connect(
+		PuMP_MainWindow::parentAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_parentAction_triggered()));
 	connect(
 		PuMP_MainWindow::refreshAction,
 		SIGNAL(triggered()),
@@ -112,6 +135,40 @@ PuMP_DirectoryView::~PuMP_DirectoryView()
 {
 	delete PuMP_DirectoryView::openAction;
 	delete PuMP_DirectoryView::openInNewTabAction;
+}
+
+/**
+ * Function to append file-info-objects to the directory-history.
+ * @param	info	The info to append.
+ */
+void PuMP_DirectoryView::appendToHistory(const QFileInfo &info)
+{
+	if(!info.isDir() || !info.exists()) return;
+	
+	if(history.size() == 0)
+	{
+		historyCurrent = 0;
+		history.append(info);
+	}
+	else
+	{
+		if(history.size() > (historyCurrent + 1) &&
+			history.at(historyCurrent + 1) == info)
+			return;
+	
+		if(history.size() > (historyCurrent + 1) &&
+			history.at(historyCurrent + 1) != info)
+		{
+			while((historyCurrent + 1) < history.size())
+				history.removeAt(history.size() - 1);
+		}
+	
+		historyCurrent++;
+		history.insert(historyCurrent, info);
+		PuMP_MainWindow::backwardAction->setEnabled(historyCurrent > 0);
+		PuMP_MainWindow::forwardAction->setEnabled(
+			historyCurrent < (history.size() - 1));
+	}
 }
 
 /**
@@ -162,8 +219,10 @@ void PuMP_DirectoryView::on_clicked(const QModelIndex &index)
 {
 	setCurrentIndex(index);
 	QFileInfo info = model.fileInfo(index);
+	PuMP_MainWindow::parentAction->setEnabled(model.parent(index).isValid());
 	if(info.isDir())
 	{
+		appendToHistory(info);
 		PuMP_Overview::openAction->setData(info.filePath());
 		PuMP_Overview::openAction->trigger();
 	}
@@ -180,6 +239,70 @@ void PuMP_DirectoryView::on_collapsedOrExpanded(const QModelIndex &index)
 	resizeColumnToContents(0);
 }
 
+void PuMP_DirectoryView::on_backwardAction_triggered()
+{
+	if(historyCurrent > 0)
+	{
+		historyCurrent--;
+		QFileInfo info = history.at(historyCurrent);
+		QModelIndex index = model.index(info.filePath());
+		if(!index.isValid()) return;
+		
+		setCurrentIndex(index);
+		PuMP_MainWindow::parentAction->setEnabled(
+			model.parent(index).isValid());
+		PuMP_MainWindow::backwardAction->setEnabled(
+			historyCurrent > 0);
+		PuMP_MainWindow::forwardAction->setEnabled(
+			historyCurrent < (history.size() - 1));
+
+		PuMP_Overview::openAction->setData(info.filePath());
+		PuMP_Overview::openAction->trigger();
+	}
+}
+
+/**
+ * Slot-function that is called when the got-to-next-directory-action was
+ * triggered.
+ */
+void PuMP_DirectoryView::on_forwardAction_triggered()
+{
+	if(historyCurrent < (history.size() - 1))
+	{
+		historyCurrent++;
+		QFileInfo info = history.at(historyCurrent);
+		QModelIndex index = model.index(info.filePath());
+		if(!index.isValid()) return;
+		
+		setCurrentIndex(index);
+		PuMP_MainWindow::parentAction->setEnabled(
+			model.parent(index).isValid());
+		PuMP_MainWindow::backwardAction->setEnabled(
+			historyCurrent > 0);
+		PuMP_MainWindow::forwardAction->setEnabled(
+			historyCurrent < (history.size() - 1));
+
+		PuMP_Overview::openAction->setData(info.filePath());
+		PuMP_Overview::openAction->trigger();
+	}
+}
+
+/**
+ * Slot-function that is called when the go-to-home-directory-action
+ * was triggered.
+ */
+void PuMP_DirectoryView::on_homeAction_triggered()
+{
+	QVariant v = PuMP_MainWindow::homeAction->data();
+	if(v.isValid())
+	{
+		QFileInfo info(v.toString());
+		QModelIndex index = model.index(info.filePath());
+		if(index.isValid() && info.exists() && info.isDir())
+			on_clicked(index);
+	}
+}
+
 /**
  * Slot-function that is called when the open-action was triggered.
  */
@@ -192,7 +315,12 @@ void PuMP_DirectoryView::on_openAction_triggered()
 		PuMP_DirectoryView::openAction->setData(QVariant());
 		QModelIndex index = model.index(info.filePath());
 		if(index.isValid() && info.exists() && info.isDir())
+		{
+			PuMP_MainWindow::parentAction->setEnabled(
+				model.parent(index).isValid());
+			appendToHistory(info);
 			setCurrentIndex(index);
+		}
 	}
 	else
 	{
@@ -208,6 +336,26 @@ void PuMP_DirectoryView::on_openInNewTabAction_triggered()
 {
 	QModelIndex index = currentIndex();
 	on_activated(index, true);
+}
+
+/**
+ * Slot-function that is called when the go-to-parent-directory-action
+ * was triggered.
+ */
+void PuMP_DirectoryView::on_parentAction_triggered()
+{
+	QModelIndex index = model.parent(currentIndex());
+	if(index.isValid())
+	{
+		setCurrentIndex(index);
+		PuMP_MainWindow::parentAction->setEnabled(
+			model.parent(index).isValid());
+
+		QFileInfo info = model.fileInfo(index);
+		appendToHistory(info);
+		PuMP_Overview::openAction->setData(info.filePath());
+		PuMP_Overview::openAction->trigger();
+	}
 }
 
 /**

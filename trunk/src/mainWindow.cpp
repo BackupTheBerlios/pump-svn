@@ -53,6 +53,7 @@ QAction *PuMP_MainWindow::homeAction = NULL;
 QAction *PuMP_MainWindow::mirrorHAction = NULL;
 QAction *PuMP_MainWindow::mirrorVAction = NULL;
 QAction *PuMP_MainWindow::nextAction = NULL;
+QAction *PuMP_MainWindow::parentAction = NULL;
 QAction *PuMP_MainWindow::previousAction = NULL;
 QAction *PuMP_MainWindow::refreshAction = NULL;
 QAction *PuMP_MainWindow::rotateCWAction = NULL;
@@ -107,9 +108,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.setMovable(false);
 	toolBar.setAllowedAreas(Qt::TopToolBarArea);
 	toolBar.setToolButtonStyle(Qt::ToolButtonIconOnly);
-	toolBar.insertAction(NULL, PuMP_MainWindow::homeAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::backwardAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::forwardAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::parentAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::homeAction);
 	toolBar.addSeparator();
 	toolBar.insertAction(NULL, PuMP_MainWindow::refreshAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::stopAction);
@@ -158,6 +160,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	menu = menuBar()->addMenu("&Go to");
 	menu->insertAction(NULL, PuMP_MainWindow::backwardAction);
 	menu->insertAction(NULL, PuMP_MainWindow::forwardAction);
+	menu->insertAction(NULL, PuMP_MainWindow::parentAction);
 	menu->insertAction(NULL, PuMP_MainWindow::homeAction);
 	menu->addSeparator();
 	menu->insertAction(NULL, PuMP_MainWindow::previousAction);
@@ -181,6 +184,8 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	setWindowTitle("PuMP - Publish My Pictures");
 	//resize(QSize(640, 480));
 	adjustSize();
+	
+	PuMP_MainWindow::homeAction->trigger();	
 }
 
 /**
@@ -203,6 +208,7 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete PuMP_MainWindow::mirrorHAction;
 	delete PuMP_MainWindow::mirrorVAction;
 	delete PuMP_MainWindow::nextAction;
+	delete PuMP_MainWindow::parentAction;
 	delete PuMP_MainWindow::previousAction;
 	delete PuMP_MainWindow::refreshAction;
 	delete PuMP_MainWindow::rotateCWAction;
@@ -266,6 +272,7 @@ void PuMP_MainWindow::setupActions()
 		"Last directory",
 		this);
 	PuMP_MainWindow::backwardAction->setToolTip("Got to the last directory.");
+	PuMP_MainWindow::backwardAction->setEnabled(false);
 	
 	PuMP_MainWindow::closeAction = new QAction(
 		QIcon(":/tab_remove.png"),
@@ -298,12 +305,14 @@ void PuMP_MainWindow::setupActions()
 		"Next directory",
 		this);
 	PuMP_MainWindow::forwardAction->setToolTip("Got to the next directory.");
+	PuMP_MainWindow::forwardAction->setEnabled(false);
 
 	PuMP_MainWindow::homeAction = new QAction(
 		QIcon(":/gohome.png"),
 		"Home",
 		this);
 	PuMP_MainWindow::homeAction->setToolTip("Got to the home directory");
+	PuMP_MainWindow::homeAction->setData(QDir::homePath());
 
 	PuMP_MainWindow::mirrorHAction = new QAction(
 		QIcon(":/hmirror.png"),
@@ -327,6 +336,13 @@ void PuMP_MainWindow::setupActions()
 		this);
 	PuMP_MainWindow::nextAction->setToolTip("Got to the next image.");
 	PuMP_MainWindow::nextAction->setEnabled(false);
+	
+	PuMP_MainWindow::parentAction = new QAction(
+		QIcon(":/up.png"),
+		"Parent directory",
+		this);
+	PuMP_MainWindow::parentAction->setToolTip("Got to the parent directory.");
+	PuMP_MainWindow::parentAction->setEnabled(false);
 
 	PuMP_MainWindow::previousAction = new QAction(
 		QIcon(":/previous.png"),

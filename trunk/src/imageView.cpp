@@ -201,9 +201,12 @@ void PuMP_ImageView::zoom(PuMP_DisplayView *view, int step)
 	double factor = view->display.zoom - DEFAULT_ZOOM;
 	if(factor < 0) factor /= (int)(MAX_ZOOM_STEPS / 2) + 1;
 	
+	PuMP_MainWindow::zoomInAction->setEnabled(true);
 	PuMP_MainWindow::zoomOutAction->setEnabled(true);
 	if(view->display.zoom == MAX_ZOOM_STEPS)
 		PuMP_MainWindow::zoomInAction->setEnabled(false);
+	if(view->display.zoom == 0)
+		PuMP_MainWindow::zoomOutAction->setEnabled(false);
 	
 	matrix.reset();
 	matrix.scale(1 + factor, 1 + factor);
@@ -287,9 +290,9 @@ void PuMP_ImageView::on_currentChanged(int index)
 		PuMP_MainWindow::sizeOriginalAction->setEnabled(view->display.scaled);
 		PuMP_MainWindow::sizeFittedAction->setEnabled(!view->display.scaled);
 		PuMP_MainWindow::zoomInAction->setEnabled(
-			(view->display.zoom != MAX_ZOOM_STEPS));
+			(view->display.zoom < MAX_ZOOM_STEPS));
 		PuMP_MainWindow::zoomOutAction->setEnabled(
-			(view->display.zoom != (-1) * MAX_ZOOM_STEPS));
+			(view->display.zoom > 0));
 	}
 }
 
@@ -517,7 +520,6 @@ void PuMP_ImageView::on_sizeFittedAction()
 	if(factor < 1) factor *= (int)(MAX_ZOOM_STEPS / 2) + 1;
 
 	view->display.zoom = ((int) factor) + DEFAULT_ZOOM - 1;
-	qDebug() << view->display.zoom; 
 	view->display.scaled = true;
 	
 	PuMP_MainWindow::zoomInAction->setEnabled(true);

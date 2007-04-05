@@ -65,6 +65,7 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *mirrorHAction;
 		static QAction *mirrorVAction;
 		static QAction *nextAction;
+		static QAction *parentAction;
 		static QAction *previousAction;
 		static QAction *refreshAction;
 		static QAction *rotateCWAction;
