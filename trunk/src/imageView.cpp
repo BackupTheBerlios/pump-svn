@@ -20,655 +20,514 @@
  */
 
 #include <assert.h>
-#include <math.h>
 
 #include <QContextMenuEvent>
 #include <QDebug>
+#include <QDir>
+#include <QList>
+#include <QMatrix>
 #include <QMenu>
-#include <QMessageBox>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QPaintEvent>
+#include <QScrollBar>
 
-#include "display.hh"
 #include "imageView.hh"
 #include "mainWindow.hh"
-#include "overview.hh"
+#include "tabView.hh"
 
 /*****************************************************************************/
 
-/** init static action-pointers */
-QAction *PuMP_ImageView::closeAllAction = NULL;
-QAction *PuMP_ImageView::closeOthersAction = NULL;
-
 /**
- * Constructor of class PuMP_ImageView which mainly sets up the given
- * overview-tab and connects the needed slots
- * @param	nameFilters	A string containing the supported image-formats the
- * 						application can handle.
- * @param	parent		Pointer on this widgets parent-widget.
+ * Constructor of class PuMP_Display that sets this displays image and is
+ * responsible for painting it. Can be OpenGL-supported if PuMP was compiled
+ * with the appropriate flag.
+ * @param	parent	The parent widget of this view.
  */
-PuMP_ImageView::PuMP_ImageView(QWidget *parent)	: QTabWidget(parent)
+PuMP_Display::PuMP_Display(QWidget *parent)
+	: QWidget(parent)
 {
-	overview = new PuMP_Overview(parent);
-	connect(
-		overview,
-		SIGNAL(openImage(const QFileInfo &, bool)),
-		this,
-		SLOT(on_openImage(const QFileInfo &, bool)));
-	connect(
-		overview,
-		SIGNAL(updateStatusBar(int, const QString &)),
-		this,
-		SLOT(on_updateStatusBar(int, const QString &)));
-	addTab(overview, "Overview");
-	
-	connect(
-		this,
-		SIGNAL(currentChanged(int)),
-		this,
-		SLOT(on_currentChanged(int)));
-
-	connect(
-		PuMP_MainWindow::closeAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeAction_triggered()));
-	PuMP_ImageView::closeAllAction = new QAction("Close all tabs", this);
-	connect(
-		PuMP_ImageView::closeAllAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeAllAction_triggered()));
-	PuMP_ImageView::closeOthersAction = new QAction("Close other tabs", this);
-	connect(
-		PuMP_ImageView::closeOthersAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_closeOthersAction_triggered()));
-	connect(
-		PuMP_MainWindow::mirrorHAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_mirrorHAction()));
-	connect(
-		PuMP_MainWindow::mirrorVAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_mirrorVAction()));
-	connect(
-		PuMP_MainWindow::nextAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_nextAction()));
-	connect(
-		PuMP_MainWindow::previousAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_previousAction()));
-	connect(
-		PuMP_MainWindow::rotateCWAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_rotateCWAction()));
-	connect(
-		PuMP_MainWindow::rotateCCWAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_rotateCCWAction()));
-	connect(
-		PuMP_MainWindow::sizeOriginalAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_sizeOriginalAction()));
-	connect(
-		PuMP_MainWindow::sizeFittedAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_sizeFittedAction()));
-	connect(
-		PuMP_MainWindow::zoomInAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_zoomInAction()));
-	connect(
-		PuMP_MainWindow::zoomOutAction,
-		SIGNAL(triggered()),
-		this,
-		SLOT(on_zoomOutAction()));
+	setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
 }
 
 /**
- * Destructor of class PuMP_ImageView that clears all data strucutures and
- * removes all tabs.
+ * The overloaded function that handles mouse-press-events for this widget.
+ * @param	event	The mouse-event that occured.
  */
-PuMP_ImageView::~PuMP_ImageView()
+void PuMP_Display::mousePressEvent(QMouseEvent *event)
 {
-	delete PuMP_ImageView::closeAllAction;
-	delete PuMP_ImageView::closeOthersAction;
-	
-	removeTab(indexOf(overview));
-	delete overview;
-	
-	QMap<QString, PuMP_DisplayView *>::iterator it;
-	for(it = tabs.begin(); it != tabs.end(); it++)
+	if(event->buttons() == Qt::MidButton)
 	{
-		removeTab(indexOf(it.value()));
-		infos.remove(it.key());
-		delete it.value();
+		if(PuMP_MainWindow::sizeOriginalAction->isEnabled())
+			PuMP_MainWindow::sizeOriginalAction->trigger();
+		else PuMP_MainWindow::sizeFittedAction->trigger();
+
+		adjustSize();
 	}
-	tabs.clear();
+	else event->ignore();
+}
+
+/**
+ * Overloaded function that handles paint-events for this widget. It simply
+ * paints the picture the image-variable contains.
+ * @param	event	The paint-event that occured. 
+ */
+void PuMP_Display::paintEvent(QPaintEvent *event)
+{
+	if(image.isNull()) resize(QSize(1, 1));
+	else
+	{	
+		QPainter painter(this);
+		painter.setClipRegion(event->region());
+		painter.drawPixmap(event->rect(), image, event->rect());
+	}
+}
+
+/**
+ * The overloaded function that is called from other widgets to obtain a
+ * suitable size-value for this widget.
+ */
+QSize PuMP_Display::sizeHint() const
+{
+	QSize dsize = size();
+	if(!image.isNull()) dsize = image.size();
+
+	return dsize;
+}
+
+/*****************************************************************************/
+
+/**
+ * Constructor of class PuMP_ImageProcessor that basically sets up the image
+ * variables.
+ * @param	parent	The parent of this class.
+ */
+PuMP_ImageProcessor::PuMP_ImageProcessor(QObject *parent) : QThread(parent)
+{
+	hasNext = false;
+	hasPrevious = false;
+	mirroredHorizontal = false;
+	mirroredVertical = false;
+	rotation = 0;
+	scaled = false;
+	zoom = DEFAULT_ZOOM;
+	mode = PuMP_ImageView::None;	
+}
+
+/**
+ * Function that returns a file-info-object pointing to the current images
+ * successor in its directory.
+ * @param	previous	Flag indicating if the successor should be the next
+ * 						or the previous entry.
+ * @return	A file-info object pointing on the demanded successor, an empty
+ * 			file-info-object, if current has none.
+ */
+QFileInfo PuMP_ImageProcessor::getSuccessor(bool previous) const
+{
+	QFileInfo succ;
+	if(previous && !hasPrevious) return succ;
+	if(!previous && !hasNext) return succ;
+	if(!info.exists()) return succ;
+
+	QList<QFileInfo> list = info.dir().entryInfoList(
+		PuMP_MainWindow::nameFilters, QDir::Files);
+	int index = list.indexOf(info);
+	if(previous && index == 0) return succ;
+	if(!previous && index == (list.size() - 1)) return succ;
+	
+	if(previous) index--;
+	else index++;
+	
+	succ = list.at(index);
+	return succ;
+}
+
+/**
+ * The overloaded main-function of this thread, which processed the (given)
+ * image. On success an imageProcessed-signal will be emitted,
+ * otherwise an error-signal will be emitted.
+ */
+void PuMP_ImageProcessor::run()
+{
+	bool newImage = false;
+
+	if(mode == PuMP_ImageView::LoadImage)
+	{
+		image.load(info.filePath());
+		newImage = true;
+	}
+	else if(mode == PuMP_ImageView::LoadNextImage)
+	{
+		QFileInfo next = getSuccessor();
+		if(!next.exists())
+		{
+			emit error(next.filePath());
+			return;
+		}
+		
+		info = next;
+		image.load(info.filePath());
+		newImage = true;
+	}
+	else if(mode == PuMP_ImageView::LoadPreviousImage)
+	{
+		QFileInfo prev = getSuccessor(true);
+		if(!prev.exists())
+		{
+			emit error(prev.filePath());
+			return;
+		}
+		
+		info = prev;
+		image.load(info.filePath());
+		newImage = true;
+	}
+	else if(mode == PuMP_ImageView::MirrorHorizontally)
+	{
+		mirroredHorizontal = !mirroredHorizontal;
+	}
+	else if(mode == PuMP_ImageView::MirrorVertically)
+	{
+		mirroredVertical = !mirroredVertical;
+	}
+	else if(mode == PuMP_ImageView::ResizeToOriginal)
+	{
+		zoom = DEFAULT_ZOOM;
+		scaled = false;
+	}
+	else if(mode == PuMP_ImageView::ResizeToFitted)
+	{
+		scaled = true;
+	}
+	else if(mode == PuMP_ImageView::RotateClockWise)
+	{
+		rotation = (rotation + 90) % 360;
+	}
+	else if(mode == PuMP_ImageView::RotateCounterClockWise)
+	{
+		rotation = (rotation - 90) % 360;
+	}
+	else if(mode == PuMP_ImageView::ZoomIn)
+	{
+		if(zoom < MAX_ZOOM_STEPS) zoom++;
+		scaled = false;
+	}
+	else if(mode == PuMP_ImageView::ZoomOut)
+	{
+		if(zoom > 0) zoom--;
+		scaled = false;
+	}
+	else
+	{
+		qDebug() << "Unknown action demanded";
+		emit error(info.filePath());
+		return;
+	}
+
+	QImage result;
+	if(newImage)
+	{
+		if(image.isNull())
+		{
+			emit error(info.filePath());
+			return;
+		}
+
+		QList<QFileInfo> list = info.dir().entryInfoList(
+			PuMP_MainWindow::nameFilters, QDir::Files);
+		int index = list.indexOf(info);
+
+		hasNext = (index < (list.size() - 1));
+		hasPrevious = (index > 0);	
+		mirroredHorizontal = false;
+		mirroredVertical = false;
+		scaled = false;
+		zoom = DEFAULT_ZOOM;
+		
+		result = image;
+	}
+	else
+	{
+		QMatrix matrix;
+		if(!scaled)
+		{
+			double factor = zoom - DEFAULT_ZOOM;
+			if(factor < 0) factor /= (int)(MAX_ZOOM_STEPS / 2) + 1;
+			
+			matrix.rotate(rotation);
+			matrix.scale(1 + factor, 1 + factor);
+			result = image;
+			result = result.transformed(matrix, Qt::SmoothTransformation);
+			result = result.mirrored(mirroredHorizontal, mirroredVertical);
+		}
+		else
+		{
+			matrix.rotate(rotation);
+			result = image;
+			result = result.transformed(matrix, Qt::SmoothTransformation);
+			result = result.mirrored(mirroredHorizontal, mirroredVertical);
+			result = result.scaled(
+				((PuMP_ImageView *) parent())->size(),
+				Qt::KeepAspectRatio,
+				Qt::SmoothTransformation);
+			
+			double factor = ((double) result.width()) / image.width();
+			if(factor < 1) factor *= (int)(MAX_ZOOM_STEPS / 2) + 1;
+
+			zoom = ((int) factor) + DEFAULT_ZOOM - 1;
+		}
+	}
+	
+	if(result.isNull()) emit error(info.filePath());
+	else emit imageProcessed(result);
+}
+
+/**
+ * Public interface for functionality of this thread. If the thread currently
+ * runs the function will simply return. If the given file doesn't exist or
+ * is a directory (in case of a load-action) an error-signal will be emitted.
+ * @param	mode	The action to perform.
+ * @param	info	The QFileInfo-Object representing the image to load.
+ */	
+void PuMP_ImageProcessor::process(int mode, const QFileInfo &info)
+{
+	if(isRunning() || mode == PuMP_ImageView::None) return;
+	
+	this->mode = mode;
+	if(mode == PuMP_ImageView::LoadImage)
+	{
+		if(!info.exists() || info.isDir())
+		{
+			emit error(info.filePath());
+			return;
+		}
+		
+		this->info = info;
+	}
+	
+	start();
+}
+
+/*****************************************************************************/
+
+/** init static modex */
+int PuMP_ImageView::None = 0; 
+int PuMP_ImageView::LoadImage = 1;
+int PuMP_ImageView::LoadNextImage = 2;
+int PuMP_ImageView::LoadPreviousImage = 4;
+int PuMP_ImageView::MirrorHorizontally = 8;
+int PuMP_ImageView::MirrorVertically = 16;
+int PuMP_ImageView::ResizeToOriginal = 32;
+int PuMP_ImageView::ResizeToFitted = 64;
+int PuMP_ImageView::RotateClockWise = 128;
+int PuMP_ImageView::RotateCounterClockWise = 256;
+int PuMP_ImageView::ZoomIn = 512;
+int PuMP_ImageView::ZoomOut = 1024;
+
+/**
+ * Consructor of class PuMP_ImageView that creates a widget to display images.
+ * @param	parent	The parent widget of this view.
+ */
+PuMP_ImageView::PuMP_ImageView(QWidget *parent)
+	: QScrollArea(parent)
+{
+	lastPos.setX(0);
+	lastPos.setY(0);
+
+	display.setParent(this);
+	processor.setParent(this);
+	connect(
+		&processor,
+		SIGNAL(error(const QString &)),
+		this,
+		SLOT(on_error(const QString &)));
+	connect(
+		&processor,
+		SIGNAL(imageProcessed(const QImage &)),
+		this,
+		SLOT(on_imageProcessed(const QImage &)));
+
+	horizontalScrollBar()->setMinimum(0);
+	verticalScrollBar()->setMinimum(0);
+	
+	setBackgroundRole(QPalette::Dark);
+	setCursor(Qt::OpenHandCursor);
+	setMouseTracking(false);
+	setWidget(&display);
 }
 
 /**
  * Overloaded function for context-menu-events. It provides a custom menu for
- * the overview and the other tabs.
+ * the this image.
  * @param	e The context-menu-event. 
  */
-void PuMP_ImageView::contextMenuEvent(QContextMenuEvent *e)
+void PuMP_ImageView::contextMenuEvent(QContextMenuEvent *event)
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0) return;
-	
-	PuMP_MainWindow::closeAction->setEnabled(true);
-	PuMP_ImageView::closeAllAction->setEnabled(true);
-	PuMP_ImageView::closeOthersAction->setEnabled(true);
-	if(cw == (QWidget *) overview)
-		PuMP_MainWindow::closeAction->setEnabled(false);
-
-	QMenu menu(this);
-	menu.addAction(PuMP_MainWindow::closeAction);
-	menu.addSeparator();
-	menu.addAction(PuMP_ImageView::closeAllAction);
-	menu.addAction(PuMP_ImageView::closeOthersAction);
-	menu.exec(e->globalPos());
-}
-
-/**
- * Function that zooms the given display's image to the given step.
- * @param	view	The display to zoom.
- * @param	step	The zoom-step.
- */
-void PuMP_ImageView::zoom(PuMP_DisplayView *view, int step)
-{
-	if(view == NULL ||
-		step > MAX_ZOOM_STEPS ||
-		step < 0 ||
-		view->display.zoom == step) return;
-	
-	QImage temp = view->display.image.mirrored(
-		view->display.mirroredHorizontal,
-		view->display.mirroredVertical);
-
-	QMatrix matrix;
-	matrix.rotate(view->display.rotation);
-	temp = temp.transformed(matrix, Qt::SmoothTransformation);
-
-	view->display.zoom = step;
-	double factor = view->display.zoom - DEFAULT_ZOOM;
-	if(factor < 0) factor /= (int)(MAX_ZOOM_STEPS / 2) + 1;
-	
-	PuMP_MainWindow::zoomInAction->setEnabled(true);
-	PuMP_MainWindow::zoomOutAction->setEnabled(true);
-	if(view->display.zoom == MAX_ZOOM_STEPS)
-		PuMP_MainWindow::zoomInAction->setEnabled(false);
-	if(view->display.zoom == 0)
-		PuMP_MainWindow::zoomOutAction->setEnabled(false);
-	
-	matrix.reset();
-	matrix.scale(1 + factor, 1 + factor);
-
-	view->display.displayed = QPixmap::fromImage(
-		temp.transformed(matrix,
-		Qt::SmoothTransformation));
-	view->display.scaled = false;
-	view->display.adjustSize();
-	view->display.update();
-}
-
-/**
- * Slot-function that is called when the user demands to close the current tab.
- * The overview can't be closed.
- */
-void PuMP_ImageView::on_closeAction_triggered()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0) return;
-
-	QMap<QString, PuMP_DisplayView *>::iterator it = tabs.begin();
-	while(it != tabs.end())
+	if(!display.image.isNull())
 	{
-		if((QWidget *) it.value() == cw)
+		QMenu menu(this);
+		menu.addAction(PuMP_MainWindow::mirrorHAction);
+		menu.addAction(PuMP_MainWindow::mirrorVAction);
+		menu.addAction(PuMP_MainWindow::rotateCWAction);
+		menu.addAction(PuMP_MainWindow::rotateCCWAction);
+		menu.addSeparator();
+		menu.addAction(PuMP_MainWindow::sizeOriginalAction);
+		menu.addAction(PuMP_MainWindow::sizeFittedAction);
+		menu.addAction(PuMP_MainWindow::zoomInAction);
+		menu.addAction(PuMP_MainWindow::zoomOutAction);
+		menu.exec(event->globalPos());
+	}
+	else event->ignore();
+}
+
+/**
+ * The overloaded function that handles mouse-move-events for this widget.
+ * @param	event	The mouse-event that occured.
+ */
+void PuMP_ImageView::mouseMoveEvent(QMouseEvent *event)
+{
+	if(event->buttons() == Qt::LeftButton)
+	{
+		if(horizontalScrollBar()->maximum() != 0 &&
+			verticalScrollBar()->maximum() != 0)
 		{
-			removeTab(indexOf(it.value()));
-			delete it.value();
-			infos.remove(it.key());
-			tabs.erase(it);
-			break;
+			setUpdatesEnabled(false);
+			setCursor(Qt::ClosedHandCursor);
+			
+			int x = lastPos.x() - event->x();
+			int y = lastPos.y() - event->y();
+			
+			moveBy(x, y);
+			lastPos = event->pos();
+			setUpdatesEnabled(true);
 		}
-		else it++;
 	}
+	else event->ignore();
 }
 
 /**
- * Slot-function that is called, when the current tabs changed. It sets up the
- * actions states for the new current tab.
- * @param	index The index of the new current tab.
+ * The overloaded function that handles mouse-press-events for this widget.
+ * @param	event	The mouse-event that occured.
  */
-void PuMP_ImageView::on_currentChanged(int index)
+void PuMP_ImageView::mousePressEvent(QMouseEvent *event)
 {
-	QWidget *cw = widget(index);
-	if(cw == NULL || tabs.size() == 0 || cw == overview)
-	{
-		bool enable = (tabs.size() != 0);
-		PuMP_MainWindow::closeAction->setEnabled(false);
-		PuMP_ImageView::closeAllAction->setEnabled(enable);
-		PuMP_ImageView::closeOthersAction->setEnabled(enable);
-		PuMP_MainWindow::mirrorHAction->setEnabled(false);
-		PuMP_MainWindow::mirrorVAction->setEnabled(false);
-		PuMP_MainWindow::nextAction->setEnabled(false);
-		PuMP_MainWindow::previousAction->setEnabled(false);
-		PuMP_MainWindow::rotateCWAction->setEnabled(false);
-		PuMP_MainWindow::rotateCCWAction->setEnabled(false);
-		PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
-		PuMP_MainWindow::sizeFittedAction->setEnabled(false);
-		PuMP_MainWindow::zoomInAction->setEnabled(false);
-		PuMP_MainWindow::zoomOutAction->setEnabled(false);
-	}
-	else
-	{
-		bool enable = (tabs.size() != 1);
-		PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-		
-		PuMP_MainWindow::closeAction->setEnabled(true);
-		PuMP_ImageView::closeAllAction->setEnabled(true);
-		PuMP_ImageView::closeOthersAction->setEnabled(enable);
-		PuMP_MainWindow::mirrorHAction->setEnabled(true);
-		PuMP_MainWindow::mirrorVAction->setEnabled(true);
-		PuMP_MainWindow::nextAction->setEnabled(view->display.hasNext);
-		PuMP_MainWindow::previousAction->setEnabled(view->display.hasPrevious);
-		PuMP_MainWindow::rotateCWAction->setEnabled(true);
-		PuMP_MainWindow::rotateCCWAction->setEnabled(true);
-		PuMP_MainWindow::sizeOriginalAction->setEnabled(view->display.scaled);
-		PuMP_MainWindow::sizeFittedAction->setEnabled(!view->display.scaled);
-		PuMP_MainWindow::zoomInAction->setEnabled(
-			(view->display.zoom < MAX_ZOOM_STEPS));
-		PuMP_MainWindow::zoomOutAction->setEnabled(
-			(view->display.zoom > 0));
-	}
+	if(event->buttons() == Qt::LeftButton) lastPos = event->pos();
+	else event->ignore();
 }
 
 /**
- * Slot-function that is called when an display-view failed to load its image.
- * @param	view	A pointer to the display-view that failed.
+ * The overloaded function that handles mouse-release-events for this widget.
+ * @param	event	The mouse-event that occured.
  */
-void PuMP_ImageView::on_displayView_loadingError(PuMP_DisplayView *view)
+void PuMP_ImageView::mouseReleaseEvent(QMouseEvent *event)
 {
-	if(view == NULL) return;
+	setCursor(Qt::OpenHandCursor);
+	event->ignore();
+}	
 
-	QMessageBox::information(
-		this,
-		"Information",
-		"Failed to load \"" + view->fileName() + "\"");
-	
-	QMap<QString, PuMP_DisplayView *>::iterator it = tabs.begin();
-	while(it != tabs.end())
-	{
-		if(it.value() == view)
-		{
-			removeTab(indexOf(it.value()));
-			delete it.value();
-			infos.remove(it.key());
-			tabs.erase(it);
-			break;
-		}
-		else it++;
-	}
+/**
+ * Function that moves the scroll-areas child-widget by the given coordinates.
+ * @param	x	The horizontal movement.
+ * @param	y	The vertical movement.
+ */
+void PuMP_ImageView::moveBy(int x, int y)
+{
+	QSize s = widget()->size();
+	double pX = s.width() / horizontalScrollBar()->maximum();
+	double pY = s.height() / verticalScrollBar()->maximum();
+	int valX = horizontalScrollBar()->value();
+	int valY = verticalScrollBar()->value();
+
+	horizontalScrollBar()->setValue((int)(valX + x * pX));
+	verticalScrollBar()->setValue((int)(valY + y * pY));
 }
 
 /**
- * Slot-function that is called to mirror the current image horizontally.
+ * Function that returns the file-name associated with the view's image.
+ * @return	The file-name associated with the view's image.
  */
-void PuMP_ImageView::on_mirrorHAction()
+QString PuMP_ImageView::fileName() const
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	view->display.displayed = QPixmap::fromImage(
-		view->display.displayed.toImage().mirrored(true, false));
-	view->display.mirroredHorizontal = !view->display.mirroredHorizontal;
-	view->display.adjustSize(); 
-	view->display.update();
+	return processor.info.fileName();
 }
 
 /**
- * Slot-function that is called to mirror the current image vertically.
+ * Function that returns the file-path associated with the view's image.
+ * @return	The file-path associated with the view's image.
  */
-void PuMP_ImageView::on_mirrorVAction()
+QString PuMP_ImageView::filePath() const
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	view->display.displayed = QPixmap::fromImage(
-		view->display.displayed.toImage().mirrored());
-	view->display.mirroredVertical = !view->display.mirroredVertical;
-	view->display.adjustSize();
-	view->display.update();
+	return processor.info.filePath();
 }
 
 /**
- * Slot-function that is called when the go-to-next-image-action was triggered.
+ * This is a wrapper for PuMP_ImageProcessor::getSuccessor().
+ * @param	previous	Flag indicating if the successor should be the next
+ * 						or the previous entry.
+ * @return	A file-info object pointing on the demanded successor, an empty
+ * 			file-info-object, if current has none.
  */
-void PuMP_ImageView::on_nextAction()
+QFileInfo PuMP_ImageView::getSuccessor(bool previous) const
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	QFileInfo info = view->getSuccessor();
-	if(!info.exists()) return;
-	
-	QMap<QString, PuMP_DisplayView *>::iterator it;
-	it = tabs.find(info.filePath());
-	if(it != tabs.end()) setCurrentWidget(it.value());
-	else
-	{
-		infos.remove(view->filePath());
-		infos[info.filePath()] = info;
-		
-		tabs.remove(view->filePath());
-		tabs[info.filePath()] = view;
-		
-		view->setImage(info);
-		setTabText(currentIndex(), info.fileName());
-		setTabToolTip(currentIndex(), info.filePath());
-		on_currentChanged(currentIndex());
-	}
+	return processor.getSuccessor(previous);
 }
 
 /**
- * Slot-function that is called when the go-to-previous-image-action
- * was triggered.
+ * Function that commands the processor-thread to do the demanded action.
+ * @param	mode	The action to process.
+ * @param	info	The image to load (if action is load).
  */
-void PuMP_ImageView::on_previousAction()
+void PuMP_ImageView::process(int mode, const QFileInfo &info)
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	QFileInfo info = view->getSuccessor(true);
-	if(!info.exists()) return;
-	
-	QMap<QString, PuMP_DisplayView *>::iterator it;
-	it = tabs.find(info.filePath());
-	if(it != tabs.end()) setCurrentWidget(it.value());
-	else
-	{
-		infos.remove(view->filePath());
-		infos[info.filePath()] = info;
-		
-		tabs.remove(view->filePath());
-		tabs[info.filePath()] = view;
-		
-		view->setImage(info);
-		setTabText(currentIndex(), info.fileName());
-		setTabToolTip(currentIndex(), info.filePath());
-		on_currentChanged(currentIndex());
-	}
+	setActions(true);
+	processor.process(mode, info);
 }
 
 /**
- * Slot-function that displays the given image in the current-tab or in a
- * new tab.
- * @param	info	The image to load.
- * @param	newTab	Flag indicating if the image will be opened in a new tab.
+ * Function that enables/disables all actions related to the image according
+ * to the images properties.
+ * @param	disableAll	Flag to disable all actions. 
  */
-void PuMP_ImageView::on_openImage(const QFileInfo &info, bool newTab)
+void PuMP_ImageView::setActions(bool disableAll)
 {
-	if(info.isDir() || !info.exists())
-	{
-		QMessageBox::information(
-			this,
-			"Information",
-			"Cannot show \"" + info.fileName() + "\"");
-		return;
-	}
-	
-	QMap<QString, PuMP_DisplayView *>::iterator it;
-	it = tabs.find(info.filePath());
-	if(it != tabs.end())
-	{
-		setCurrentWidget(it.value());
-		return;
-	}
-
-	if(tabs.size() == 0 || newTab)
-	{
-		PuMP_DisplayView *view = new PuMP_DisplayView(info, this);
-		connect(
-			view,
-			SIGNAL(loadingError(PuMP_DisplayView *)),
-			this,
-			SLOT(on_displayView_loadingError(PuMP_DisplayView *)));
-
-		tabs[info.filePath()] = view;
-		infos[info.filePath()] = info;
-
-		int index = addTab(view, info.fileName());
-		setTabToolTip(index, info.filePath());
-
-		setCurrentWidget(view);
-	}
-	else
-	{
-		PuMP_DisplayView *view = (PuMP_DisplayView *) widget(1);
-		if(view == NULL)
-		{
-			QMessageBox::information(
-				this,
-				"Information",
-				"Cannot show \"" + info.fileName() + "\"");
-			return;
-		}
-		
-		infos.remove(view->filePath());
-		infos[info.filePath()] = info;
-		
-		tabs.remove(view->filePath());
-		tabs[info.filePath()] = view;
-		
-		view->setImage(info);
-		setTabText(1, info.fileName());
-		setTabToolTip(1, info.filePath());
-		
-		setCurrentWidget(view);
-	}
+	PuMP_MainWindow::closeAction->setEnabled(!disableAll);
+	PuMP_MainWindow::mirrorHAction->setEnabled(!disableAll);
+	PuMP_MainWindow::mirrorVAction->setEnabled(!disableAll);
+	PuMP_MainWindow::nextAction->setEnabled(!disableAll && processor.hasNext);
+	PuMP_MainWindow::previousAction->setEnabled(
+		!disableAll && processor.hasPrevious);
+	PuMP_MainWindow::rotateCWAction->setEnabled(!disableAll);
+	PuMP_MainWindow::rotateCCWAction->setEnabled(!disableAll);
+	PuMP_MainWindow::sizeOriginalAction->setEnabled(
+		!disableAll && processor.scaled);
+	PuMP_MainWindow::sizeFittedAction->setEnabled(
+		!disableAll && !processor.scaled);
+	PuMP_MainWindow::zoomInAction->setEnabled(
+		!disableAll && (processor.zoom < MAX_ZOOM_STEPS));
+	PuMP_MainWindow::zoomOutAction->setEnabled(
+		!disableAll && (processor.zoom > 0));
 }
 
 /**
- * Slot-function that is called to rotate the current image clockwise by
- * 90 degrees.
+ * Slot-function that is called when the image couldn't be processed.
+ * @param	file	The path of the image that failed.
  */
-void PuMP_ImageView::on_rotateCWAction()
+void PuMP_ImageView::on_error(const QString &file)
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-
-	QMatrix matrix;
-	matrix.rotate(90);
-	
-	view->display.displayed = QPixmap::fromImage(
-		view->display.displayed.toImage().transformed(
-		matrix, Qt::SmoothTransformation));
-	view->display.rotation = (view->display.rotation + 90) % 360;
-	view->display.adjustSize();
-	view->display.update();
+	qDebug() << "Error processing" << file;
+	emit error(this);
 }
 
 /**
- * Slot-function that is called to rotate the current image
- * counter-clockwise by 90 degrees.
+ * Slot-function that is called when the image was processed.
+ * @param	image	The processed image..
  */
-void PuMP_ImageView::on_rotateCCWAction()
+void PuMP_ImageView::on_imageProcessed(const QImage &result)
 {
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-
-	QMatrix matrix;
-	matrix.rotate(-90);
-	
-	view->display.displayed = QPixmap::fromImage(
-		view->display.displayed.toImage().transformed(
-		matrix, Qt::SmoothTransformation));
-	view->display.rotation = (view->display.rotation - 90) % 360;
-	view->display.adjustSize();
-	view->display.update();
-}
-
-/**
- * Slot-function that shows the current image in original size.
- */
-void PuMP_ImageView::on_sizeOriginalAction()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-
-	PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
-	PuMP_MainWindow::sizeFittedAction->setEnabled(true);
-
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-
-	QImage temp = view->display.image.mirrored(
-		view->display.mirroredHorizontal,
-		view->display.mirroredVertical);
-
-	QMatrix matrix;
-	matrix.rotate(view->display.rotation);
-	temp = temp.transformed(matrix, Qt::SmoothTransformation);
-
-	view->display.displayed = QPixmap::fromImage(temp);
-	view->display.zoom = DEFAULT_ZOOM;
-	view->display.scaled = false;
-	view->display.adjustSize();
-	view->display.update();
-}
-
-/**
- * Slot-function that shows the current image fitted to the displays size.
- */
-void PuMP_ImageView::on_sizeFittedAction()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-
-	PuMP_MainWindow::sizeOriginalAction->setEnabled(true);
-	PuMP_MainWindow::sizeFittedAction->setEnabled(false);
-
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-
-	QImage temp = view->display.image.scaled(
-		view->size(),
-		Qt::KeepAspectRatio,
-		Qt::SmoothTransformation);
-					
-	temp = temp.mirrored(
-		view->display.mirroredHorizontal,
-		view->display.mirroredVertical);
-
-	QMatrix matrix;
-	matrix.rotate(view->display.rotation);
-	temp = temp.transformed(matrix, Qt::SmoothTransformation);
-	
-	double factor = ((double) temp.width()) / view->display.image.width();
-	if(factor < 1) factor *= (int)(MAX_ZOOM_STEPS / 2) + 1;
-
-	view->display.zoom = ((int) factor) + DEFAULT_ZOOM - 1;
-	view->display.scaled = true;
-	
-	PuMP_MainWindow::zoomInAction->setEnabled(true);
-	if(view->display.zoom == 0)
-		PuMP_MainWindow::zoomOutAction->setEnabled(false);
-
-	view->display.displayed = QPixmap::fromImage(temp);
-	view->display.adjustSize();
-	view->display.update();
-}
-
-/**
- * Slot-function that is called to zoom into the current image.
- */
-void PuMP_ImageView::on_zoomInAction()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	zoom(view, view->display.zoom + 1);
-}
-
-/**
- * Slot-function that is called to zoom out of the current image.
- */
-void PuMP_ImageView::on_zoomOutAction()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
-	
-	PuMP_DisplayView *view = (PuMP_DisplayView *) cw;
-	zoom(view, view->display.zoom - 1);
-}
-
-/**
- * Slot-function that enables all components of this widget to send
- * messages to the main-window's status-bar.
- * @param	value	The value for the status-bar's progress-bar.
- * @param	text	The message displayed at the status-bar.
- */
-void PuMP_ImageView::on_updateStatusBar(int value, const QString &text)
-{
-	emit updateStatusBar(value, text);
-}
-
-/**
- * Slot-function that is called when the user demands to close all tabs.
- * The overview can't be closed.
- */
-void PuMP_ImageView::on_closeAllAction_triggered()
-{
-	QMap<QString, PuMP_DisplayView *>::iterator it;
-	for(it = tabs.begin(); it != tabs.end(); it++)
-	{
-		removeTab(indexOf(it.value()));
-		infos.remove(it.key());
-		delete it.value();
-	}
-	tabs.clear();
-}
-
-/**
- * Slot-function that is called when the user demands to close all tabs
- * but the current tab (and of course the overview).
- */
-void PuMP_ImageView::on_closeOthersAction_triggered()
-{
-	QWidget *cw = currentWidget();
-	if(cw == NULL || tabs.size() == 0) return;
-
-	QMap<QString, PuMP_DisplayView *>::iterator it = tabs.begin();
-	while(it != tabs.end())
-	{
-		if((QWidget *) it.value() != cw)
-		{
-			removeTab(indexOf(it.value()));
-			infos.remove(it.key());
-			delete it.value();
-			it = tabs.erase(it);
-		}
-		else it++;
-	}
+	setActions(); // this is a bit buggy because the user could have changed the tab already
+	display.image = QPixmap::fromImage(result);
+	display.adjustSize();
+	display.update();
 }
 
 /*****************************************************************************/

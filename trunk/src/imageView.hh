@@ -22,62 +22,111 @@
 #ifndef IMAGEVIEW_HH_
 #define IMAGEVIEW_HH_
 
-#include <QAction>
 #include <QFileInfo>
-#include <QMap>
-#include <QString>
-#include <QTabWidget>
+#include <QImage>
+#include <QPixmap>
+#include <QScrollArea>
+#include <QThread>
+
+#define MAX_ZOOM_STEPS	8
+#define DEFAULT_ZOOM	4
 
 /*****************************************************************************/
 
-class PuMP_Overview;
-class PuMP_DisplayView;
+class PuMP_Display : public QWidget
+{
+	Q_OBJECT
+	
+	protected:
+		void mousePressEvent(QMouseEvent *event);
+		void paintEvent(QPaintEvent *event);
+	
+	public:
+		QPixmap image;
+
+		PuMP_Display(QWidget *parent = 0);
+		QSize sizeHint() const;
+	
+};
 
 /*****************************************************************************/
 
-class PuMP_ImageView : public QTabWidget
+class PuMP_ImageProcessor : public QThread
+{
+	Q_OBJECT
+	
+	protected:
+		int mode;
+		QImage image;
+
+		void run();
+	
+	public:
+		QFileInfo info;
+
+		bool hasNext;
+		bool hasPrevious;
+		bool mirroredHorizontal;
+		bool mirroredVertical;
+		int rotation;
+		bool scaled;
+		int zoom;
+
+		PuMP_ImageProcessor(QObject *parent = 0);
+		
+		QFileInfo getSuccessor(bool previous = false) const;
+		void process(int mode, const QFileInfo &info = QFileInfo());
+	
+	signals:
+		void error(const QString &file);
+		void imageProcessed(const QImage &result);
+};
+
+/*****************************************************************************/
+
+class PuMP_ImageView : public QScrollArea
 {
 	Q_OBJECT
 
 	protected:
-		PuMP_Overview *overview;
+		QPoint lastPos;
 
-		QMap<QString, QFileInfo> infos;
-		QMap<QString, PuMP_DisplayView *> tabs;
-		
-		void contextMenuEvent(QContextMenuEvent *e);
-		void zoom(PuMP_DisplayView *view, int step);
-	
+		void contextMenuEvent(QContextMenuEvent *event);
+		void mouseMoveEvent(QMouseEvent *event);
+		void mousePressEvent(QMouseEvent *event);
+		void mouseReleaseEvent(QMouseEvent *event);		
+		void moveBy(int x, int y);
+
 	public:
-		static QAction *closeAllAction;
-		static QAction *closeOthersAction;
+		static int None;
+		static int LoadImage;
+		static int LoadNextImage;
+		static int LoadPreviousImage;
+		static int MirrorHorizontally;
+		static int MirrorVertically;
+		static int ResizeToOriginal;
+		static int ResizeToFitted;
+		static int RotateClockWise;
+		static int RotateCounterClockWise;
+		static int ZoomIn;
+		static int ZoomOut;
 
+		PuMP_Display display;
+		PuMP_ImageProcessor processor;
 		PuMP_ImageView(QWidget *parent = 0);
-		~PuMP_ImageView();
-	
+		
+		QString fileName() const;
+		QString filePath() const;
+		QFileInfo getSuccessor(bool previous = false) const;
+		void process(int mode, const QFileInfo &info = QFileInfo());
+		void setActions(bool disableAll = false);
+
 	public slots:
-		void on_closeAction_triggered();
-		void on_currentChanged(int index); 
-		void on_displayView_loadingError(PuMP_DisplayView *view = NULL);
-		void on_mirrorHAction();
-		void on_mirrorVAction();
-		void on_nextAction();
-		void on_previousAction();
-		void on_openImage(const QFileInfo &info, bool newTab);
-		void on_rotateCWAction();
-		void on_rotateCCWAction();
-		void on_sizeOriginalAction();
-		void on_sizeFittedAction();
-		void on_zoomInAction();
-		void on_zoomOutAction();
-		void on_updateStatusBar(int value, const QString &text);
-	
-	protected slots:
-		void on_closeAllAction_triggered();
-		void on_closeOthersAction_triggered();
-	
+		void on_error(const QString &file);
+		void on_imageProcessed(const QImage &result);
+		
 	signals:
-		void updateStatusBar(int value, const QString &text);
+		void error(PuMP_ImageView *view);	
 };
 
 /*****************************************************************************/

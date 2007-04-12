@@ -23,6 +23,7 @@
 #include "directoryView.hh"
 #include "imageView.hh"
 #include "mainWindow.hh"
+#include "tabView.hh"
 
 #include <assert.h>
 
@@ -46,6 +47,7 @@ QAction *PuMP_MainWindow::aboutQtAction = NULL;
 QAction *PuMP_MainWindow::backwardAction = NULL;
 QAction *PuMP_MainWindow::closeAction = NULL;
 QAction *PuMP_MainWindow::exitAction = NULL;
+QAction *PuMP_MainWindow::exportAction = NULL;
 QAction *PuMP_MainWindow::forceExitAction = NULL;
 QAction *PuMP_MainWindow::forwardAction = NULL;
 QAction *PuMP_MainWindow::homeAction = NULL;
@@ -88,20 +90,20 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	QHBoxLayout *hBoxLayout = new QHBoxLayout(cWidget);
 	setCentralWidget(cWidget);
 	
-	// treeview for filesystem & imageview for images and overview
+	// treeview for filesystem & tabView for images and overview
 	directoryView = new PuMP_DirectoryView(cWidget);
-	imageView = new PuMP_ImageView(cWidget);
+	tabView = new PuMP_TabView(cWidget);
 	hBoxLayout->addWidget(directoryView);
-	hBoxLayout->addWidget(imageView);
+	hBoxLayout->addWidget(tabView);
 
 	// connect their signals
 	connect(
 		directoryView,
 		SIGNAL(openImage(const QFileInfo &, bool)),
-		imageView,
+		tabView,
 		SLOT(on_openImage(const QFileInfo &, bool)));
 	connect(
-		imageView,
+		tabView,
 		SIGNAL(updateStatusBar(int, const QString &)),
 		this,
 		SLOT(on_statusBarUpdate(int, const QString &)));
@@ -134,6 +136,8 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.insertAction(NULL, PuMP_MainWindow::zoomInAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::zoomOutAction);
 	toolBar.addSeparator();
+	toolBar.insertAction(NULL, PuMP_MainWindow::exportAction);
+	toolBar.addSeparator();
 	addToolBar(&toolBar);
 
 	// setup menubar
@@ -145,7 +149,7 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	menu->insertAction(NULL, PuMP_MainWindow::forceExitAction);
 	menu->insertAction(NULL, PuMP_MainWindow::exitAction);
 	menu = menuBar()->addMenu("&Edit");
-//	menu->insertAction(NULL, PuMP_MainWindow::exportAction);
+	menu->insertAction(NULL, PuMP_MainWindow::exportAction);
 //	menu->insertAction(NULL, PuMP_MainWindow::preferenceAction);
 	menu = menuBar()->addMenu("&View");
 	menu->insertAction(NULL, PuMP_MainWindow::mirrorHAction);
@@ -197,13 +201,14 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 PuMP_MainWindow::~PuMP_MainWindow()
 {
 	delete directoryView;
-	delete imageView;
+	delete tabView;
 
 	delete PuMP_MainWindow::aboutAction;
 	delete PuMP_MainWindow::aboutQtAction;
 	delete PuMP_MainWindow::backwardAction;
 	delete PuMP_MainWindow::closeAction;
 	delete PuMP_MainWindow::exitAction;
+	delete PuMP_MainWindow::exportAction;
 	delete PuMP_MainWindow::forceExitAction;
 	delete PuMP_MainWindow::forwardAction;
 	delete PuMP_MainWindow::homeAction;
@@ -289,6 +294,15 @@ void PuMP_MainWindow::setupActions()
 		SIGNAL(triggered()),
 		this,
 		SLOT(close()));
+
+	PuMP_MainWindow::exportAction = new QAction("Export selection", this);
+	PuMP_MainWindow::exportAction->setToolTip(
+		"Export the selected directory/files");
+	connect(
+		PuMP_MainWindow::exportAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_exportAction()));
 	
 	PuMP_MainWindow::forceExitAction = new QAction("Quit", this);
 	PuMP_MainWindow::forceExitAction->setToolTip("Exit PuMP ungracefully.");
@@ -425,6 +439,12 @@ void PuMP_MainWindow::setupActions()
 void PuMP_MainWindow::on_about()
 {
 	
+}
+
+void PuMP_MainWindow::on_exportAction()
+{
+//	PuMP_ExportDialog dialog(this);
+//	dialog.exec();
 }
 
 /**

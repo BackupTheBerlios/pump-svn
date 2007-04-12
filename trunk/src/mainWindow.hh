@@ -32,7 +32,7 @@
 /*****************************************************************************/
 
 class PuMP_DirectoryView;
-class PuMP_ImageView;
+class PuMP_TabView;
 
 /*****************************************************************************/
 
@@ -42,7 +42,7 @@ class PuMP_MainWindow : public QMainWindow
 	
 	protected:
 		PuMP_DirectoryView *directoryView;
-		PuMP_ImageView *imageView;
+		PuMP_TabView *tabView;
 		
 		QLabel progressBarLabel;
 		QProgressBar progressBar;
@@ -57,6 +57,7 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *backwardAction;
 		static QAction *closeAction;
 		static QAction *exitAction;
+		static QAction *exportAction;
 		static QAction *forceExitAction;
 		static QAction *forwardAction;
 		static QAction *homeAction;
@@ -82,6 +83,7 @@ class PuMP_MainWindow : public QMainWindow
 
 	public slots:
 		void on_about();
+		void on_exportAction();
 		void on_forceExit();
 		void on_statusBarUpdate(int value, const QString &text);
 };

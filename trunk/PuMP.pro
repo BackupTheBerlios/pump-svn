@@ -9,10 +9,10 @@ DESTDIR = ./
 
 HEADERS = \
 	src/directoryView.hh \
-	src/display.hh \
 	src/imageView.hh \
 	src/mainWindow.hh \
 	src/overview.hh \
+	src/tabView.hh \
 	src/export.hh \
 	src/configDialog.hh \
 	src/configPages.hh \
@@ -20,11 +20,11 @@ HEADERS = \
 	
 SOURCES = \
 	src/directoryView.cpp \
-	src/display.cpp \
 	src/imageView.cpp \
 	src/main.cpp \
 	src/mainWindow.cpp \
 	src/overview.cpp \
+	src/tabView.cpp \
 	src/export.cpp \
 	src/configDialog.cpp \
 	src/configPages.cpp
