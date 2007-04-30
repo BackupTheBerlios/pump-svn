@@ -24,9 +24,13 @@
 #include <QContextMenuEvent>
 #include <QDebug>
 #include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QHBoxLayout>
 #include <QList>
 #include <QMatrix>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -104,6 +108,7 @@ QSize PuMP_Display::sizeHint() const
  */
 PuMP_ImageProcessor::PuMP_ImageProcessor(QObject *parent) : QThread(parent)
 {
+	processingFinished = true;
 	hasNext = false;
 	hasPrevious = false;
 	mirroredHorizontal = false;
@@ -111,7 +116,7 @@ PuMP_ImageProcessor::PuMP_ImageProcessor(QObject *parent) : QThread(parent)
 	rotation = 0;
 	scaled = false;
 	zoom = DEFAULT_ZOOM;
-	mode = PuMP_ImageView::None;	
+	mode = PuMP_ImageView::None;
 }
 
 /**
@@ -150,6 +155,7 @@ QFileInfo PuMP_ImageProcessor::getSuccessor(bool previous) const
 void PuMP_ImageProcessor::run()
 {
 	bool newImage = false;
+	processingFinished = false;
 
 	if(mode == PuMP_ImageView::LoadImage)
 	{
@@ -161,6 +167,7 @@ void PuMP_ImageProcessor::run()
 		QFileInfo next = getSuccessor();
 		if(!next.exists())
 		{
+			processingFinished = true;
 			emit error(next.filePath());
 			return;
 		}
@@ -174,6 +181,7 @@ void PuMP_ImageProcessor::run()
 		QFileInfo prev = getSuccessor(true);
 		if(!prev.exists())
 		{
+			processingFinished = true;
 			emit error(prev.filePath());
 			return;
 		}
@@ -220,6 +228,7 @@ void PuMP_ImageProcessor::run()
 	else
 	{
 		qDebug() << "Unknown action demanded";
+		processingFinished = true;
 		emit error(info.filePath());
 		return;
 	}
@@ -229,6 +238,7 @@ void PuMP_ImageProcessor::run()
 	{
 		if(image.isNull())
 		{
+			processingFinished = true;
 			emit error(info.filePath());
 			return;
 		}
@@ -278,6 +288,7 @@ void PuMP_ImageProcessor::run()
 		}
 	}
 	
+	processingFinished = true;
 	if(result.isNull()) emit error(info.filePath());
 	else emit imageProcessed(result);
 }
@@ -305,7 +316,58 @@ void PuMP_ImageProcessor::process(int mode, const QFileInfo &info)
 		this->info = info;
 	}
 	
-	start();
+	start(/*QThread::LowPriority*/);
+}
+
+/*****************************************************************************/
+
+/**
+ * Constructor for class PuMP_ImageDialog.
+ * @param	parent	The parent-widget of this dialog.
+ */
+PuMP_ImageDialog::PuMP_ImageDialog(QWidget *parent)
+	: QDialog(parent)
+{
+	isActive = false;
+
+	button.setIcon(QIcon(":/stop.png"));
+	button.setIconSize(QSize(32, 32));
+	button.setMinimumSize(33, 33);
+	connect(&button, SIGNAL(released()), this, SLOT(reject()));
+	
+	QHBoxLayout *l = new QHBoxLayout(this);
+	l->addWidget(&button);
+	l->addWidget(&label);
+	
+	setSizeGripEnabled(false);
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
+}
+
+/**
+ * Slot-function to show up this dialog in a none-modal (none-blocking)
+ * fashion.
+ * @param	text	The text to display in the dialog.
+ */
+void PuMP_ImageDialog::appear(const QString &text)
+{
+	if(isActive) return;
+
+	isActive = true;
+	label.setText(text);
+	show();
+	raise();
+	activateWindow();
+}
+
+/**
+ * Overloaded function to get close-events for this dialog (in order to set
+ * the isActive-flag). The event is always accepted.
+ * @param	event	The close-event that occured.
+ */
+void PuMP_ImageDialog::closeEvent(QCloseEvent *event)
+{
+	isActive = false;
+	event->accept();
 }
 
 /*****************************************************************************/
@@ -375,6 +437,9 @@ void PuMP_ImageView::contextMenuEvent(QContextMenuEvent *event)
 		menu.addAction(PuMP_MainWindow::sizeFittedAction);
 		menu.addAction(PuMP_MainWindow::zoomInAction);
 		menu.addAction(PuMP_MainWindow::zoomOutAction);
+		menu.addSeparator();
+		menu.addAction(PuMP_MainWindow::saveAction);
+		menu.addAction(PuMP_MainWindow::saveAsAction);
 		menu.exec(event->globalPos());
 	}
 	else event->ignore();
@@ -480,7 +545,61 @@ QFileInfo PuMP_ImageView::getSuccessor(bool previous) const
 void PuMP_ImageView::process(int mode, const QFileInfo &info)
 {
 	setActions(true);
+	backup = processor.info;
 	processor.process(mode, info);
+}
+
+/**
+ * Function that saves the current image (including its rotation and
+ * mirroring) under the given file-path. If fpath is empty an dialog will
+ * appear the user can choose an appropriate file-path.
+ * @param	fpath	The file-path to save the image to.
+ */
+void PuMP_ImageView::save(QString fpath)
+{
+	QString oldExt = processor.info.completeSuffix();
+	QString newExt = oldExt;
+	if(fpath.isEmpty())
+	{
+		if(!newExt.isEmpty()) newExt.prepend("*.");
+		fpath = QFileDialog::getSaveFileName(
+			this,
+			QString("Save ") + fileName() + " as",
+			QString(QDir::homePath()) + "/" + fileName(),
+			PuMP_MainWindow::nameFilterString2,
+			&newExt);
+		if(fpath.isEmpty() || newExt.isEmpty()) return;
+	}
+	
+	QMatrix matrix;
+	matrix.rotate(processor.rotation);
+	QImage toSave = processor.image;
+	toSave = toSave.transformed(matrix, Qt::SmoothTransformation);
+	toSave = toSave.mirrored(
+		processor.mirroredHorizontal,
+		processor.mirroredVertical);
+	
+	newExt.remove(0, 2);
+	if(fpath.endsWith(newExt)) newExt.clear();
+	else if(fpath.endsWith(oldExt))
+	{
+		fpath.chop(oldExt.length());
+		fpath += newExt;
+	}
+	else fpath += "." + newExt;
+	
+	qDebug() << fpath << oldExt << newExt;
+
+	const char *ext = NULL;
+	if(!newExt.isEmpty()) ext = newExt.toAscii().data();
+	if(!toSave.save(fpath, ext))
+	{
+		QMessageBox::information(
+			this,
+			"Information",
+			"Failed to save \"" + fpath + "\"");
+		return;
+	}
 }
 
 /**
@@ -490,22 +609,28 @@ void PuMP_ImageView::process(int mode, const QFileInfo &info)
  */
 void PuMP_ImageView::setActions(bool disableAll)
 {
-	PuMP_MainWindow::closeAction->setEnabled(!disableAll);
-	PuMP_MainWindow::mirrorHAction->setEnabled(!disableAll);
-	PuMP_MainWindow::mirrorVAction->setEnabled(!disableAll);
-	PuMP_MainWindow::nextAction->setEnabled(!disableAll && processor.hasNext);
+	bool enable = processor.processingFinished;
+	PuMP_MainWindow::closeAction->setEnabled(!disableAll && enable);
+	PuMP_MainWindow::mirrorHAction->setEnabled(!disableAll && enable);
+	PuMP_MainWindow::mirrorVAction->setEnabled(!disableAll && enable);
+	PuMP_MainWindow::nextAction->setEnabled(
+		!disableAll && processor.hasNext && enable);
 	PuMP_MainWindow::previousAction->setEnabled(
-		!disableAll && processor.hasPrevious);
-	PuMP_MainWindow::rotateCWAction->setEnabled(!disableAll);
-	PuMP_MainWindow::rotateCCWAction->setEnabled(!disableAll);
+		!disableAll && processor.hasPrevious && enable);
+	PuMP_MainWindow::rotateCWAction->setEnabled(!disableAll && enable);
+	PuMP_MainWindow::rotateCCWAction->setEnabled(!disableAll && enable);
+	PuMP_MainWindow::saveAction->setEnabled(!disableAll && enable &&
+		(processor.mirroredHorizontal || processor.mirroredVertical ||
+		(processor.rotation != 0)));
+	PuMP_MainWindow::saveAsAction->setEnabled(!disableAll && enable);
 	PuMP_MainWindow::sizeOriginalAction->setEnabled(
-		!disableAll && processor.scaled);
+		!disableAll && processor.scaled && enable);
 	PuMP_MainWindow::sizeFittedAction->setEnabled(
-		!disableAll && !processor.scaled);
+		!disableAll && !processor.scaled && enable);
 	PuMP_MainWindow::zoomInAction->setEnabled(
-		!disableAll && (processor.zoom < MAX_ZOOM_STEPS));
+		!disableAll && (processor.zoom < MAX_ZOOM_STEPS) && enable);
 	PuMP_MainWindow::zoomOutAction->setEnabled(
-		!disableAll && (processor.zoom > 0));
+		!disableAll && (processor.zoom > 0) && enable);
 }
 
 /**
@@ -524,10 +649,32 @@ void PuMP_ImageView::on_error(const QString &file)
  */
 void PuMP_ImageView::on_imageProcessed(const QImage &result)
 {
-	setActions(); // this is a bit buggy because the user could have changed the tab already
+	emit processingFinished();
 	display.image = QPixmap::fromImage(result);
 	display.adjustSize();
 	display.update();
+}
+
+/**
+ * Slot-function that stops the execution of the processor-thread if it is
+ * currently running.
+ */
+void PuMP_ImageView::on_stop()
+{
+	qDebug() << "stopped";
+	if(processor.isRunning())
+	{
+		processor.terminate();
+		processor.processingFinished = true;
+		processor.hasNext = false;
+		processor.hasPrevious = false;
+		processor.mirroredHorizontal = false;
+		processor.mirroredVertical = false;
+		processor.rotation = 0;
+		processor.scaled = false;
+		processor.zoom = DEFAULT_ZOOM;
+		processor.info = backup;
+	}
 }
 
 /*****************************************************************************/

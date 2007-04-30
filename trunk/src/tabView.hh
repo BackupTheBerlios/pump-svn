@@ -46,7 +46,6 @@ class PuMP_TabView : public QTabWidget
 		QMap<QString, PuMP_ImageView *> tabs;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
-		void zoom(PuMP_ImageView *view, int step);
 	
 	public:
 		static QAction *closeAllAction;
@@ -59,6 +58,7 @@ class PuMP_TabView : public QTabWidget
 		void on_closeAction_triggered();
 		void on_currentChanged(int index); 
 		void on_error(PuMP_ImageView *view = NULL);
+		void on_imageView_processingFinished();
 		void on_mirrorHAction();
 		void on_mirrorVAction();
 		void on_nextAction();
@@ -66,6 +66,9 @@ class PuMP_TabView : public QTabWidget
 		void on_openImage(const QFileInfo &info, bool newTab);
 		void on_rotateCWAction();
 		void on_rotateCCWAction();
+		void on_saveAction();
+		void on_saveAsAction();
+		void on_setActions(PuMP_ImageView *view = NULL);
 		void on_sizeOriginalAction();
 		void on_sizeFittedAction();
 		void on_zoomInAction();

@@ -113,6 +113,16 @@ PuMP_TabView::PuMP_TabView(QWidget *parent)	: QTabWidget(parent)
 		this,
 		SLOT(on_rotateCCWAction()));
 	connect(
+		PuMP_MainWindow::saveAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_saveAction()));
+	connect(
+		PuMP_MainWindow::saveAsAction,
+		SIGNAL(triggered()),
+		this,
+		SLOT(on_saveAsAction()));
+	connect(
 		PuMP_MainWindow::sizeOriginalAction,
 		SIGNAL(triggered()),
 		this,
@@ -215,30 +225,8 @@ void PuMP_TabView::on_closeAction_triggered()
 void PuMP_TabView::on_currentChanged(int index)
 {
 	QWidget *cw = widget(index);
-	if(cw == NULL || tabs.size() == 0 || cw == overview)
-	{
-		bool enable = (tabs.size() != 0);
-		PuMP_MainWindow::closeAction->setEnabled(false);
-		PuMP_TabView::closeAllAction->setEnabled(enable);
-		PuMP_TabView::closeOthersAction->setEnabled(enable);
-		PuMP_MainWindow::mirrorHAction->setEnabled(false);
-		PuMP_MainWindow::mirrorVAction->setEnabled(false);
-		PuMP_MainWindow::nextAction->setEnabled(false);
-		PuMP_MainWindow::previousAction->setEnabled(false);
-		PuMP_MainWindow::rotateCWAction->setEnabled(false);
-		PuMP_MainWindow::rotateCCWAction->setEnabled(false);
-		PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
-		PuMP_MainWindow::sizeFittedAction->setEnabled(false);
-		PuMP_MainWindow::zoomInAction->setEnabled(false);
-		PuMP_MainWindow::zoomOutAction->setEnabled(false);
-	}
-	else
-	{
-		PuMP_ImageView *view = (PuMP_ImageView *) cw;
-		PuMP_TabView::closeAllAction->setEnabled(true);
-		PuMP_TabView::closeOthersAction->setEnabled((tabs.size() != 1));
-		view->setActions();
-	}
+	if(cw == NULL || tabs.size() == 0 || cw == overview) on_setActions();
+	else on_setActions((PuMP_ImageView *) cw);
 }
 
 /**
@@ -267,6 +255,16 @@ void PuMP_TabView::on_error(PuMP_ImageView *view)
 		}
 		else it++;
 	}
+}
+
+/**
+ * Slot-function that is a wrapper for the on_currentChanged-slot that can be
+ * called without arguments.
+ */
+void PuMP_TabView::on_imageView_processingFinished()
+{
+	int index = currentIndex();
+	on_currentChanged(index);
 }
 
 /**
@@ -353,6 +351,11 @@ void PuMP_TabView::on_openImage(const QFileInfo &info, bool newTab)
 			SIGNAL(error(PuMP_ImageView *)),
 			this,
 			SLOT(on_error(PuMP_ImageView *)));
+		connect(
+			view,
+			SIGNAL(processingFinished()),
+			this,
+			SLOT(on_imageView_processingFinished()));
 		view->process(PuMP_ImageView::LoadImage, info);
 
 		tabs.insert(info.filePath(), view);
@@ -419,6 +422,69 @@ void PuMP_TabView::on_rotateCCWAction()
 
 	PuMP_ImageView *view = (PuMP_ImageView *) cw;
 	view->process(PuMP_ImageView::RotateCounterClockWise);
+}
+
+/**
+ * Slot-function to save the current views image (including its current
+ * rotation and mirroring).
+ */
+void PuMP_TabView::on_saveAction()
+{
+	QWidget *cw = currentWidget();
+	if(cw == NULL || tabs.size() == 0 || cw == overview) return;
+
+	PuMP_ImageView *view = (PuMP_ImageView *) cw;
+	view->save(view->filePath());	
+}
+
+/**
+ * Slot-function to save the current views image (including its current
+ * rotation and mirroring) und a path that has to be specified further.
+ */
+void PuMP_TabView::on_saveAsAction()
+{
+	QWidget *cw = currentWidget();
+	if(cw == NULL) return;
+
+	if(cw == overview) overview->save();
+	else
+	{
+		PuMP_ImageView *view = (PuMP_ImageView *) cw;
+		view->save();
+	}
+}
+
+/**
+ * Slot-function to set the image's actions according to the given image-view.
+ * @param	view	The image-view to set the actions after.
+ */
+void PuMP_TabView::on_setActions(PuMP_ImageView *view)
+{
+	bool enable = (tabs.size() > 0);
+	if(view == NULL)
+	{
+		PuMP_MainWindow::closeAction->setEnabled(false);
+		PuMP_TabView::closeAllAction->setEnabled(enable);
+		PuMP_TabView::closeOthersAction->setEnabled(enable);
+		PuMP_MainWindow::mirrorHAction->setEnabled(false);
+		PuMP_MainWindow::mirrorVAction->setEnabled(false);
+		PuMP_MainWindow::nextAction->setEnabled(false);
+		PuMP_MainWindow::previousAction->setEnabled(false);
+		PuMP_MainWindow::rotateCWAction->setEnabled(false);
+		PuMP_MainWindow::rotateCCWAction->setEnabled(false);
+		PuMP_MainWindow::saveAction->setEnabled(false);
+		PuMP_MainWindow::saveAsAction->setEnabled(false);
+		PuMP_MainWindow::sizeOriginalAction->setEnabled(false);
+		PuMP_MainWindow::sizeFittedAction->setEnabled(false);
+		PuMP_MainWindow::zoomInAction->setEnabled(false);
+		PuMP_MainWindow::zoomOutAction->setEnabled(false);
+	}
+	else
+	{
+		PuMP_TabView::closeAllAction->setEnabled(true);
+		PuMP_TabView::closeOthersAction->setEnabled((tabs.size() > 1));
+		view->setActions();
+	}
 }
 
 /**

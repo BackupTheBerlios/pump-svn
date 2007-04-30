@@ -21,6 +21,7 @@
 
 #include "configDialog.hh"
 #include "directoryView.hh"
+#include "exportDialog.hh"
 #include "imageView.hh"
 #include "mainWindow.hh"
 #include "tabView.hh"
@@ -60,6 +61,8 @@ QAction *PuMP_MainWindow::previousAction = NULL;
 QAction *PuMP_MainWindow::refreshAction = NULL;
 QAction *PuMP_MainWindow::rotateCWAction = NULL;
 QAction *PuMP_MainWindow::rotateCCWAction = NULL;
+QAction *PuMP_MainWindow::saveAction = NULL;
+QAction *PuMP_MainWindow::saveAsAction = NULL;
 QAction *PuMP_MainWindow::sizeOriginalAction = NULL;
 QAction *PuMP_MainWindow::sizeFittedAction = NULL;
 QAction *PuMP_MainWindow::stopAction = NULL;
@@ -68,6 +71,8 @@ QAction *PuMP_MainWindow::zoomOutAction = NULL;
 
 /** init static string-list */
 QStringList PuMP_MainWindow::nameFilters;
+QString PuMP_MainWindow::nameFilterString1;
+QString PuMP_MainWindow::nameFilterString2;
 
 /**
  * Constructor of class PuMP_MainWindow that allocates all needed components,
@@ -118,6 +123,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.insertAction(NULL, PuMP_MainWindow::parentAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::homeAction);
 	toolBar.addSeparator();
+	toolBar.insertAction(NULL, PuMP_MainWindow::saveAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::saveAsAction);
+	toolBar.insertAction(NULL, PuMP_MainWindow::exportAction);
+	toolBar.addSeparator();	
 	toolBar.insertAction(NULL, PuMP_MainWindow::refreshAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::stopAction);
 	toolBar.addSeparator();
@@ -136,8 +145,6 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	toolBar.insertAction(NULL, PuMP_MainWindow::zoomInAction);
 	toolBar.insertAction(NULL, PuMP_MainWindow::zoomOutAction);
 	toolBar.addSeparator();
-	toolBar.insertAction(NULL, PuMP_MainWindow::exportAction);
-	toolBar.addSeparator();
 	addToolBar(&toolBar);
 
 	// setup menubar
@@ -145,6 +152,9 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	menu = menuBar()->addMenu("&File");
 	menu->insertAction(NULL, PuMP_MainWindow::openInNewTabAction);
 	menu->insertAction(NULL, PuMP_MainWindow::closeAction);
+	menu->addSeparator();
+	menu->insertAction(NULL, PuMP_MainWindow::saveAction);
+	menu->insertAction(NULL, PuMP_MainWindow::saveAsAction);
 	menu->addSeparator();
 	menu->insertAction(NULL, PuMP_MainWindow::forceExitAction);
 	menu->insertAction(NULL, PuMP_MainWindow::exitAction);
@@ -221,6 +231,8 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete PuMP_MainWindow::refreshAction;
 	delete PuMP_MainWindow::rotateCWAction;
 	delete PuMP_MainWindow::rotateCCWAction;
+	delete PuMP_MainWindow::saveAction;
+	delete PuMP_MainWindow::saveAsAction;
 	delete PuMP_MainWindow::sizeOriginalAction;
 	delete PuMP_MainWindow::sizeFittedAction;
 	delete PuMP_MainWindow::stopAction;
@@ -244,8 +256,18 @@ void PuMP_MainWindow::getSupportedImageFormats()
 			QString(formats[index].prepend(prefix).data());
 	
 	qDebug() << "supported formats:";
+	PuMP_MainWindow::nameFilterString1 = "Images (";
 	for(index = 0; index < PuMP_MainWindow::nameFilters.size(); index++)
-		qDebug() << PuMP_MainWindow::nameFilters[index]; 
+	{
+		PuMP_MainWindow::nameFilterString1 +=
+			PuMP_MainWindow::nameFilters[index] + " ";
+		PuMP_MainWindow::nameFilterString2 +=
+			PuMP_MainWindow::nameFilters[index] + ";;";
+		qDebug() << PuMP_MainWindow::nameFilters[index];
+	}
+	PuMP_MainWindow::nameFilterString1.chop(1);
+	PuMP_MainWindow::nameFilterString1 += ")";
+	PuMP_MainWindow::nameFilterString2.chop(2);
 }
 
 /**
@@ -295,9 +317,13 @@ void PuMP_MainWindow::setupActions()
 		this,
 		SLOT(close()));
 
-	PuMP_MainWindow::exportAction = new QAction("Export selection", this);
+	PuMP_MainWindow::exportAction = new QAction(
+		QIcon(":/save_all.png"),
+		"Export selection...",
+		this);
 	PuMP_MainWindow::exportAction->setToolTip(
 		"Export the selected directory/files");
+	PuMP_MainWindow::exportAction->setEnabled(false);
 	connect(
 		PuMP_MainWindow::exportAction,
 		SIGNAL(triggered()),
@@ -351,10 +377,10 @@ void PuMP_MainWindow::setupActions()
 
 	PuMP_MainWindow::openInNewTabAction = new QAction(
 		QIcon(":/tab_new.png"),
-		"Open in new tab",
+		"Open selection in new tab",
 		this);
 	PuMP_MainWindow::openInNewTabAction->setToolTip(
-		"Open selected image in a new tab.");
+		"Open selected image(s) in a new tab.");
 	PuMP_MainWindow::openInNewTabAction->setEnabled(false);
 	
 	PuMP_MainWindow::parentAction = new QAction(
@@ -393,6 +419,20 @@ void PuMP_MainWindow::setupActions()
 	PuMP_MainWindow::rotateCWAction->setToolTip("Rotate the current image " \
 		"clockwise.");
 	PuMP_MainWindow::rotateCWAction->setEnabled(false);
+
+	PuMP_MainWindow::saveAction = new QAction(
+		QIcon(":/filesave.png"),
+		"Save",
+		this);
+	PuMP_MainWindow::saveAction->setToolTip("Save the current image");
+	PuMP_MainWindow::saveAction->setEnabled(false);
+
+	PuMP_MainWindow::saveAsAction = new QAction(
+		QIcon(":/filesaveas.png"),
+		"Save as...",
+		this);
+	PuMP_MainWindow::saveAsAction->setToolTip("Save the current image as ...");
+	PuMP_MainWindow::saveAsAction->setEnabled(false);
 
 	PuMP_MainWindow::sizeOriginalAction = new QAction(
 		QIcon(":/viewmag1.png"),
@@ -443,8 +483,8 @@ void PuMP_MainWindow::on_about()
 
 void PuMP_MainWindow::on_exportAction()
 {
-//	PuMP_ExportDialog dialog(this);
-//	dialog.exec();
+	PuMP_ExportDialog dialog(this);
+	dialog.exec();
 }
 
 /**

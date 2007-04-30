@@ -16,6 +16,7 @@ HEADERS = \
 	src/export.hh \
 	src/configDialog.hh \
 	src/configPages.hh \
+	src/exportDialog.hh \
 	src/zlib/zlib.h
 	
 SOURCES = \
@@ -27,6 +28,7 @@ SOURCES = \
 	src/tabView.cpp \
 	src/export.cpp \
 	src/configDialog.cpp \
+	src/exportDialog.cpp \
 	src/configPages.cpp
 
 # built application not lib

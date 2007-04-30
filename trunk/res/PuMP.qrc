@@ -6,6 +6,8 @@
 	<file>./basicConfiguration.png</file>
 	<file>./exit.png</file>
 	<file>./export.png</file>
+	<file>./filesave.png</file>
+	<file>./filesaveas.png</file>
 	<file>./folder16.png</file>
 	<file>./folder32.png</file>
 	<file>./folder64.png</file>
@@ -18,6 +20,7 @@
 	<file>./reload.png</file>
 	<file>./rotate_ccw.png</file>
 	<file>./rotate_cw.png</file>
+	<file>./save_all.png</file>
 	<file>./stop.png</file>
 	<file>./tab_new.png</file>
 	<file>./tab_remove.png</file>

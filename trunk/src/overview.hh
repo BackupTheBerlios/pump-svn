@@ -139,6 +139,8 @@ class PuMP_Overview : public QListView
 		PuMP_Overview(QWidget *parent = 0);
 		~PuMP_Overview();
 		
+		void save();
+		
 	public slots:
 		void on_activated(const QModelIndex &index, bool newTab = true);
 

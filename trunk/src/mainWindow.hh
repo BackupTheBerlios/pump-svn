@@ -70,6 +70,8 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *refreshAction;
 		static QAction *rotateCWAction;
 		static QAction *rotateCCWAction;
+		static QAction *saveAction;
+		static QAction *saveAsAction;
 		static QAction *sizeOriginalAction;
 		static QAction *sizeFittedAction;
 		static QAction *stopAction;
@@ -77,6 +79,8 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *zoomOutAction;
 		
 		static QStringList nameFilters;
+		static QString nameFilterString1;
+		static QString nameFilterString2;
 
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
 		~PuMP_MainWindow();

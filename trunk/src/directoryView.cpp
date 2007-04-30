@@ -236,6 +236,10 @@ void PuMP_DirectoryView::on_collapsedOrExpanded(const QModelIndex &index)
 	resizeColumnToContents(0);
 }
 
+/**
+ * Slot-function that is called when the got-to-previous-directory-action was
+ * triggered.
+ */
 void PuMP_DirectoryView::on_backwardAction_triggered()
 {
 	if(historyCurrent > 0)

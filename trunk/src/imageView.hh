@@ -22,9 +22,12 @@
 #ifndef IMAGEVIEW_HH_
 #define IMAGEVIEW_HH_
 
+#include <QDialog>
 #include <QFileInfo>
 #include <QImage>
+#include <QLabel>
 #include <QPixmap>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QThread>
 
@@ -56,18 +59,18 @@ class PuMP_ImageProcessor : public QThread
 	Q_OBJECT
 	
 	protected:
-		int mode;
-		QImage image;
-
 		void run();
 	
 	public:
+		QImage image;
 		QFileInfo info;
 
+		int mode;
 		bool hasNext;
 		bool hasPrevious;
 		bool mirroredHorizontal;
 		bool mirroredVertical;
+		bool processingFinished;
 		int rotation;
 		bool scaled;
 		int zoom;
@@ -84,11 +87,32 @@ class PuMP_ImageProcessor : public QThread
 
 /*****************************************************************************/
 
+class PuMP_ImageDialog : public QDialog
+{
+	Q_OBJECT
+	
+	protected:
+		bool isActive;
+		QLabel label;
+		QPushButton button;
+		
+		void closeEvent(QCloseEvent *event);
+
+	public:
+		PuMP_ImageDialog(QWidget *parent = 0);
+	
+	public slots:
+		void appear(const QString &text = "Processing...");
+};
+
+/*****************************************************************************/
+
 class PuMP_ImageView : public QScrollArea
 {
 	Q_OBJECT
 
 	protected:
+		QFileInfo backup;
 		QPoint lastPos;
 
 		void contextMenuEvent(QContextMenuEvent *event);
@@ -119,14 +143,17 @@ class PuMP_ImageView : public QScrollArea
 		QString filePath() const;
 		QFileInfo getSuccessor(bool previous = false) const;
 		void process(int mode, const QFileInfo &info = QFileInfo());
+		void save(QString fpath = QString());
 		void setActions(bool disableAll = false);
 
 	public slots:
 		void on_error(const QString &file);
 		void on_imageProcessed(const QImage &result);
+		void on_stop();
 		
 	signals:
-		void error(PuMP_ImageView *view);	
+		void error(PuMP_ImageView *view);
+		void processingFinished();
 };
 
 /*****************************************************************************/

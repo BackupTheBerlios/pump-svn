@@ -23,6 +23,7 @@
 
 #include <QContextMenuEvent>
 #include <QDebug>
+#include <QFileDialog>
 #include <QMenu>
 #include <QMessageBox>
 
@@ -408,6 +409,7 @@ PuMP_Overview::PuMP_Overview(QWidget *parent) : QListView(parent)
 	setModel(&model);
 	setMovement(QListView::Static);
 	setResizeMode(QListView::Fixed);
+	setSelectionMode(QAbstractItemView::ExtendedSelection);
 	setTextElideMode(Qt::ElideNone);
 	setWordWrap(true);
 	setWrapping(true);
@@ -432,6 +434,55 @@ PuMP_Overview::~PuMP_Overview()
 }
 
 /**
+ * Function that saves a selected image under another name.
+ */
+void PuMP_Overview::save()
+{
+	QModelIndex index = currentIndex();
+	if(!index.isValid()) return;
+
+	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
+	if(!info.exists()) return;
+	
+	QImage toSave(dir.absoluteFilePath(model.getFileName(index)));
+	if(toSave.isNull()) return;
+
+	QString oldExt = info.completeSuffix();
+	QString newExt = oldExt;
+	if(!newExt.isEmpty()) newExt.prepend("*.");
+
+	QString fpath = QFileDialog::getSaveFileName(
+		this,
+		QString("Save ") + info.fileName() + " as",
+		QString(QDir::homePath()) + "/" + info.fileName(),
+		PuMP_MainWindow::nameFilterString2,
+		&newExt);
+	if(fpath.isEmpty() || newExt.isEmpty()) return;
+	
+	newExt.remove(0, 2);
+	if(fpath.endsWith(newExt)) newExt.clear();
+	else if(fpath.endsWith(oldExt))
+	{
+		fpath.chop(oldExt.length());
+		fpath += newExt;
+	}
+	else fpath += "." + newExt;
+	
+	qDebug() << fpath << oldExt << newExt;
+
+	const char *ext = NULL;
+	if(!newExt.isEmpty()) ext = newExt.toAscii().data();
+	if(!toSave.save(fpath, ext))
+	{
+		QMessageBox::information(
+			this,
+			"Information",
+			"Failed to save \"" + fpath + "\"");
+		return;
+	}
+}
+
+/**
  * Overloaded function for context-menu-events. It provides a custom menu for
  * directories and files.
  * @param	e The context-menu-event. 
@@ -445,6 +496,8 @@ void PuMP_Overview::contextMenuEvent(QContextMenuEvent *e)
 	QFileInfo info(dir.absoluteFilePath(model.getFileName(index)));
 	if(!info.exists()) show = false;
 	
+	PuMP_MainWindow::saveAsAction->setEnabled(!info.isDir() && show);
+	PuMP_MainWindow::exportAction->setEnabled(show);
 	PuMP_Overview::openAction->setEnabled(show);
 	PuMP_MainWindow::openInNewTabAction->setEnabled(!info.isDir() && show);
 	PuMP_MainWindow::refreshAction->setEnabled(dir.exists());
@@ -452,6 +505,9 @@ void PuMP_Overview::contextMenuEvent(QContextMenuEvent *e)
 	QMenu menu(this);
 	menu.addAction(PuMP_Overview::openAction);
 	menu.addAction(PuMP_MainWindow::openInNewTabAction);
+	menu.addSeparator();
+	menu.addAction(PuMP_MainWindow::saveAsAction);
+	menu.addAction(PuMP_MainWindow::exportAction);
 	menu.addSeparator();
 	menu.addAction(PuMP_MainWindow::refreshAction);
 	menu.addAction(PuMP_MainWindow::stopAction);
@@ -469,6 +525,7 @@ void PuMP_Overview::currentChanged(
 {
 	Q_UNUSED(previous);
 	QFileInfo info(dir.absoluteFilePath(model.getFileName(current)));
+	PuMP_MainWindow::exportAction->setEnabled(info.exists());
 	PuMP_MainWindow::openInNewTabAction->setEnabled(
 		info.exists() && !info.isDir());
 }
@@ -627,8 +684,9 @@ void PuMP_Overview::on_openAction_triggered()
  */
 void PuMP_Overview::on_openInNewTabAction_triggered()
 {
-	QModelIndex index = currentIndex();
-	on_activated(index, true);
+	int i = 0;
+	QList<QModelIndex> selected = selectedIndexes();
+	for(i = 0; i < selected.size(); i++) on_activated(selected.at(i), true);
 }
 
 /**
