@@ -199,8 +199,9 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	// main window
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
-	//resize(QSize(640, 480));
-	adjustSize();
+	QSize size(600, 450);
+	size = size.expandedTo(minimumSizeHint());
+	resize(size);
 	
 	PuMP_MainWindow::homeAction->trigger();	
 }

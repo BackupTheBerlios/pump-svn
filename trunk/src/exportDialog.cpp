@@ -25,6 +25,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileDialog>
+#include <QMessageBox>
 
 /*****************************************************************************/
 
@@ -35,15 +36,24 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	outputGroupBox = new QGroupBox(this);
 	outputGroupBox->setTitle("Output");
 
-	watermarkCheckBox = new QCheckBox(watermarkGroupBox);
-	watermarkCheckBox->setText("Keep aspect ratio");
-	watermarkCheckBox->setChecked(true);
+	watermarkCheckBox1 = new QCheckBox(watermarkGroupBox);
+	watermarkCheckBox1->setText("Keep aspect ratio");
+	watermarkCheckBox1->setChecked(true);
+	watermarkCheckBox2 = new QCheckBox(watermarkGroupBox);
+	watermarkCheckBox2->setText("None");
+	watermarkCheckBox2->setChecked(false);
+	connect(
+		watermarkCheckBox2,
+		SIGNAL(clicked(bool)),
+		this,
+		SLOT(on_watermarkCheckBox2_clicked(bool)));
 	
 	int index = 0;
 	outputComboBoxMode = new QComboBox(outputGroupBox);
-	outputComboBoxMode->insertItem(0, "keep aspect ratio by expanding");
-	outputComboBoxMode->insertItem(0, "keep aspect ratio");
 	outputComboBoxMode->insertItem(0, "ignore aspect ratio");
+	outputComboBoxMode->insertItem(1, "keep aspect ratio");
+	outputComboBoxMode->insertItem(2, "keep aspect ratio by expanding");
+	outputComboBoxMode->setCurrentIndex(2);
 	outputComboBoxFormat = new QComboBox(outputGroupBox);
 	outputComboBoxFormat->insertItems(0, PuMP_MainWindow::nameFilters);
 	index = outputComboBoxFormat->findText(QString("*.jpg"));
@@ -53,10 +63,11 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	outputComboBoxQuality = new QComboBox(outputGroupBox);
 	outputComboBoxQuality->insertItem(
 		0,
-		"with smoothing (better quality but slower)");
-	outputComboBoxQuality->insertItem(
-		0,
 		"without smoothing (poor quality but fast)");
+	outputComboBoxQuality->insertItem(
+		1,
+		"with smoothing (better quality but slower)");
+	outputComboBoxQuality->setCurrentIndex(1);
 	
 	buttonBox = new QDialogButtonBox(this);
 	buttonBox->setOrientation(Qt::Horizontal);
@@ -121,7 +132,6 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	label12->setText("Format:");
 
 	watermarkLineEdit = new QLineEdit(watermarkGroupBox);
-	watermarkLineEdit->setText("/home/tobias/screens/maam_small.png");
 	watermarkLineEdit->setReadOnly(true);
 	outputLineEdit = new QLineEdit(outputGroupBox);
 
@@ -143,9 +153,17 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 		SIGNAL(clicked(bool)),
 		this,
 		SLOT(on_watermarkPushButton_clicked(bool)));
+	watermarkPushButtonDefaultSize = new QPushButton(watermarkGroupBox);
+	watermarkPushButtonDefaultSize->setMaximumSize(QSize(30, 16777215));
+	watermarkPushButtonDefaultSize->setText("1:1");
+	connect(
+		watermarkPushButtonDefaultSize,
+		SIGNAL(clicked(bool)),
+		this,
+		SLOT(on_watermarkPushButtonDefaultSize_clicked(bool)));
 	watermarkPushButtonDefault = new QPushButton(watermarkGroupBox);
 	watermarkPushButtonDefault->setMaximumSize(QSize(30, 16777215));
-	watermarkPushButtonDefault->setText("1:1");
+	watermarkPushButtonDefault->setIcon(QIcon(":/godefault.png"));
 	connect(
 		watermarkPushButtonDefault,
 		SIGNAL(clicked(bool)),
@@ -213,13 +231,14 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	hboxLayout->insertStretch(-1);
 	hboxLayout1->addWidget(label2);
 	hboxLayout1->addWidget(watermarkLineEdit);
+	hboxLayout1->addWidget(watermarkPushButtonDefault);
 	hboxLayout1->addWidget(watermarkPushButton);
 	hboxLayout2->addWidget(label3);
 	hboxLayout2->addWidget(watermarkSpinBoxW);
 	hboxLayout2->addWidget(label4);
 	hboxLayout2->addWidget(watermarkSpinBoxH);
-	hboxLayout2->addWidget(watermarkCheckBox);
-	hboxLayout2->addWidget(watermarkPushButtonDefault);
+	hboxLayout2->addWidget(watermarkCheckBox1);
+	hboxLayout2->addWidget(watermarkPushButtonDefaultSize);
 	hboxLayout3->addWidget(label5);
 	hboxLayout3->addWidget(watermarkSpinBoxT);
 	hboxLayout4->addWidget(label7);
@@ -236,6 +255,7 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	hboxLayout8->addWidget(label11);
 	hboxLayout8->addWidget(outputComboBoxQuality);
 	
+	vboxLayout1->addWidget(watermarkCheckBox2);
 	vboxLayout1->addLayout(hboxLayout);
 	vboxLayout1->addLayout(hboxLayout1);
 	vboxLayout1->addLayout(hboxLayout2);
@@ -252,11 +272,12 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	vboxLayout->addWidget(outputGroupBox);
 	vboxLayout->addWidget(buttonBox);
 
-	QSize size(420, 460);
-	size = size.expandedTo(minimumSizeHint());
-	resize(size);
+	defaultSize.setWidth(420);
+	defaultSize.setHeight(460);
+	defaultSize = defaultSize.expandedTo(minimumSizeHint());
+	resize(defaultSize);
 	
-	setPreview(watermarkLineEdit->text());
+	setPreview();
 }
 
 PuMP_ExportDialog::~PuMP_ExportDialog()
@@ -291,15 +312,80 @@ void PuMP_ExportDialog::setPreview(const QString &path)
 			watermarkSpinBoxH_value = watermark.height();
 
 			label1->setMinimumSize(watermark.size());
+			label1->setMaximumSize(watermark.size());
+			label1->setPixmap(watermark);
+			label1->updateGeometry();
+		}
+		else
+		{
+			QMessageBox::warning(
+				this,
+				"Warning",
+				"Couldn't load " + info.filePath() + "!");
+			watermarkLineEdit->setText("default.png");
+			watermark.load(":/default.png");
+			watermarkSpinBoxW->setValue(watermark.width());
+			watermarkSpinBoxW_value = watermark.width();
+			watermarkSpinBoxH->setValue(watermark.height());
+			watermarkSpinBoxH_value = watermark.height();
+	
+			label1->setMinimumSize(watermark.size());
+			label1->setMaximumSize(watermark.size());
 			label1->setPixmap(watermark);
 			label1->updateGeometry();
 		}
 	}
+	else
+	{
+		watermarkLineEdit->setText("default.png");
+		watermark.load(":/default.png");
+		watermarkSpinBoxW->setValue(watermark.width());
+		watermarkSpinBoxW_value = watermark.width();
+		watermarkSpinBoxH->setValue(watermark.height());
+		watermarkSpinBoxH_value = watermark.height();
+
+		label1->setMinimumSize(watermark.size());
+		label1->setMaximumSize(watermark.size());
+		label1->setPixmap(watermark);
+		label1->updateGeometry();
+	}
+}
+
+QSize PuMP_ExportDialog::sizeHint() const
+{
+	return defaultSize;
 }
 
 void PuMP_ExportDialog::on_outputPushButton_clicked(bool checked)
 {
 	Q_UNUSED(checked);
+}
+
+void PuMP_ExportDialog::on_watermarkCheckBox2_clicked(bool checked)
+{
+	label->setEnabled(!checked);
+	label1->setEnabled(!checked);
+	label2->setEnabled(!checked);
+	label3->setEnabled(!checked);
+	label4->setEnabled(!checked);
+	label5->setEnabled(!checked);
+	label6->setEnabled(!checked);
+	watermarkRadioButtonC->setEnabled(!checked);
+	watermarkRadioButtonBC->setEnabled(!checked);
+	watermarkRadioButtonTR->setEnabled(!checked);
+	watermarkRadioButtonTL->setEnabled(!checked);
+	watermarkRadioButtonTC->setEnabled(!checked);
+	watermarkRadioButtonBL->setEnabled(!checked);
+	watermarkRadioButtonBR->setEnabled(!checked);
+	watermarkLineEdit->setEnabled(!checked);
+	watermarkPushButton->setEnabled(!checked);
+	watermarkSpinBoxW->setEnabled(!checked);
+	watermarkSpinBoxH->setEnabled(!checked);
+	watermarkCheckBox1->setEnabled(!checked);
+	watermarkPushButtonDefault->setEnabled(!checked);
+	watermarkPushButtonDefaultSize->setEnabled(!checked);
+	watermarkSpinBoxT->setEnabled(!checked);
+	watermarkCheckBox2->setEnabled(true);
 }
 
 void PuMP_ExportDialog::on_watermarkPushButton_clicked(bool checked)
@@ -309,11 +395,17 @@ void PuMP_ExportDialog::on_watermarkPushButton_clicked(bool checked)
 		this,
 		"Select watermark",
 		QDir::homePath(),
-		PuMP_MainWindow::nameFilterString2);
+		PuMP_MainWindow::nameFilterString1);
 	if(!file.isEmpty()) setPreview(file);
 }
 
 void PuMP_ExportDialog::on_watermarkPushButtonDefault_clicked(bool checked)
+{
+	Q_UNUSED(checked);
+	setPreview();
+}
+
+void PuMP_ExportDialog::on_watermarkPushButtonDefaultSize_clicked(bool checked)
 {
 	Q_UNUSED(checked);
 
@@ -332,7 +424,7 @@ void PuMP_ExportDialog::on_watermarkPushButtonDefault_clicked(bool checked)
 
 void PuMP_ExportDialog::on_watermarkSpinBoxW_editingFinished()
 {
-	if(watermarkCheckBox->isChecked())
+	if(watermarkCheckBox1->isChecked())
 	{
 		watermarkSpinBoxH->setValue((int)
 			(((double) watermarkSpinBoxW->value())
@@ -358,7 +450,7 @@ void PuMP_ExportDialog::on_watermarkSpinBoxW_editingFinished()
 
 void PuMP_ExportDialog::on_watermarkSpinBoxH_editingFinished()
 {
-	if(watermarkCheckBox->isChecked())
+	if(watermarkCheckBox1->isChecked())
 	{
 		watermarkSpinBoxW->setValue((int)
 			(((double) watermarkSpinBoxH->value())

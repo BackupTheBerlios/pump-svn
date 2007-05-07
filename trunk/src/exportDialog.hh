@@ -57,7 +57,8 @@ class PuMP_ExportDialog : public QDialog
 		int watermarkSpinBoxW_value;
 		int watermarkSpinBoxH_value;
 
-		QCheckBox *watermarkCheckBox;
+		QCheckBox *watermarkCheckBox1;
+		QCheckBox *watermarkCheckBox2;
 		QComboBox *outputComboBoxMode;
 		QComboBox *outputComboBoxFormat;
 		QComboBox *outputComboBoxQuality;
@@ -94,6 +95,7 @@ class PuMP_ExportDialog : public QDialog
 		QPushButton *outputPushButton;
 		QPushButton *watermarkPushButton;
 		QPushButton *watermarkPushButtonDefault;
+		QPushButton *watermarkPushButtonDefaultSize;
 		QRadioButton *watermarkRadioButtonC;
 		QRadioButton *watermarkRadioButtonBC;
 		QRadioButton *watermarkRadioButtonTR;
@@ -101,6 +103,7 @@ class PuMP_ExportDialog : public QDialog
 		QRadioButton *watermarkRadioButtonTC;
 		QRadioButton *watermarkRadioButtonBL;
 		QRadioButton *watermarkRadioButtonBR;
+		QSize defaultSize;
 		QSpinBox *watermarkSpinBoxW;
 		QSpinBox *watermarkSpinBoxH;
 		QSpinBox *watermarkSpinBoxT;
@@ -110,7 +113,8 @@ class PuMP_ExportDialog : public QDialog
 		QVBoxLayout *vboxLayout1;
 		QVBoxLayout *vboxLayout2;
 		
-		void setPreview(const QString &path);
+		void setPreview(const QString &path = QString());
+		QSize sizeHint() const;
 	
 	public:
 		PuMP_ExportDialog(QWidget *parent = 0);
@@ -118,8 +122,10 @@ class PuMP_ExportDialog : public QDialog
 
 	public slots:
 		void on_outputPushButton_clicked(bool checked);
+		void on_watermarkCheckBox2_clicked(bool checked);
 		void on_watermarkPushButton_clicked(bool checked);
 		void on_watermarkPushButtonDefault_clicked(bool checked);
+		void on_watermarkPushButtonDefaultSize_clicked(bool checked);
 		void on_watermarkSpinBoxW_editingFinished();
 		void on_watermarkSpinBoxH_editingFinished();
 };

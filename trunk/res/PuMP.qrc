@@ -4,6 +4,7 @@
 	<file>./advancedConfiguration.png</file>
 	<file>./back.png</file>
 	<file>./basicConfiguration.png</file>
+	<file>./default.png</file>
 	<file>./exit.png</file>
 	<file>./export.png</file>
 	<file>./filesave.png</file>
@@ -13,6 +14,7 @@
 	<file>./folder64.png</file>
     <file>./folder128.png</file>
     <file>./forward.png</file>
+    <file>./godefault.png</file>
    	<file>./gohome.png</file>
 	<file>./hmirror.png</file>
 	<file>./next.png</file>

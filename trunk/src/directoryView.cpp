@@ -58,7 +58,7 @@ PuMP_DirectoryView::PuMP_DirectoryView(QWidget *parent)	: QTreeView(parent)
 	
 	resizeColumnToContents(0);
 	setMaximumWidth(200);
-	setMinimumWidth(140);
+	setMinimumWidth(columnWidth(0) + 20);
 	setModel(&model);
 
 	PuMP_DirectoryView::openAction = new QAction("Open", this);
@@ -234,6 +234,7 @@ void PuMP_DirectoryView::on_collapsedOrExpanded(const QModelIndex &index)
 {
 	Q_UNUSED(index);
 	resizeColumnToContents(0);
+	setMinimumWidth(columnWidth(0) + 20);
 }
 
 /**
