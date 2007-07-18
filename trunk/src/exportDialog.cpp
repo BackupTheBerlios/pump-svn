@@ -27,6 +27,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+#include <assert.h>
+
 /******************************************************************************/
 
 PuMP_ExportWidget::PuMP_ExportWidget(QWidget *parent)
@@ -50,17 +52,19 @@ PuMP_ExportWidget::PuMP_ExportWidget(QWidget *parent)
 		SLOT(on_watermarkCheckBox2_clicked(bool)));
 	
 	outputComboBoxMode = new QComboBox(outputGroupBox);
-	outputComboBoxMode->insertItem(0, "ignore aspect ratio");
-	outputComboBoxMode->insertItem(1, "keep aspect ratio");
-	outputComboBoxMode->insertItem(2, "keep aspect ratio by expanding");
+	outputComboBoxMode->insertItem(IgnoreAspect, "ignore aspect ratio");
+	outputComboBoxMode->insertItem(KeepAspect, "keep aspect ratio");
+	outputComboBoxMode->insertItem(
+		KeepAspectByExpanding,
+		"keep aspect ratio by expanding");
 	outputComboBoxFormat = new QComboBox(outputGroupBox);
 	outputComboBoxFormat->insertItems(0, PuMP_MainWindow::nameFilters);
 	outputComboBoxQuality = new QComboBox(outputGroupBox);
 	outputComboBoxQuality->insertItem(
-		0,
+		Unsmoothed,
 		"without smoothing (poor quality but fast)");
 	outputComboBoxQuality->insertItem(
-		1,
+		Smoothed,
 		"with smoothing (better quality but slower)");
 	
 	gridLayout = new QGridLayout();
@@ -283,6 +287,7 @@ void PuMP_ExportWidget::setPreview(const QString &path)
 		if(!watermark.isNull())
 		{
 			outputGroupBox->setMaximumSize(outputGroupBox->size());
+			watermarkScaled = watermark;
 			watermarkLineEdit->setText(path);
 			watermarkSpinBoxW->setValue(watermark.width());
 			watermarkSpinBoxW_value = watermark.width();
@@ -302,6 +307,7 @@ void PuMP_ExportWidget::setPreview(const QString &path)
 				"Couldn't load " + info.filePath() + "!");
 			watermarkLineEdit->setText("default.png");
 			watermark.load(":/default.png");
+			watermarkScaled = watermark;
 			watermarkSpinBoxW->setValue(watermark.width());
 			watermarkSpinBoxW_value = watermark.width();
 			watermarkSpinBoxH->setValue(watermark.height());
@@ -318,6 +324,7 @@ void PuMP_ExportWidget::setPreview(const QString &path)
 	{
 		watermarkLineEdit->setText("default.png");
 		watermark.load(":/default.png");
+		watermarkScaled = watermark;
 		watermarkSpinBoxW->setValue(watermark.width());
 		watermarkSpinBoxW_value = watermark.width();
 		watermarkSpinBoxH->setValue(watermark.height());
@@ -331,41 +338,41 @@ void PuMP_ExportWidget::setPreview(const QString &path)
 	}
 }
 
-void PuMP_ExportWidget::setPos(int index)
+void PuMP_ExportWidget::setPos(PuMP_ExportPosition position)
 {
-	switch(index)
+	switch(position)
 	{
-		case 0:
+		case Centered:
 		{
 			watermarkRadioButtonC->setChecked(true);
 			break;
 		}
-		case 1:
+		case TopRight:
 		{
 			watermarkRadioButtonTR->setChecked(true);
 			break;
 		}
-		case 2:
+		case TopLeft:
 		{
 			watermarkRadioButtonTL->setChecked(true);
 			break;
 		}
-		case 3:
+		case TopCentered:
 		{
 			watermarkRadioButtonTC->setChecked(true);
 			break;
 		}
-		case 4:
+		case BottomLeft:
 		{
 			watermarkRadioButtonBR->setChecked(true);
 			break;
 		}
-		case 5:
+		case BottomRight:
 		{
 			watermarkRadioButtonBL->setChecked(true);
 			break;
 		}
-		case 6:
+		case BottomCentered:
 		{
 			watermarkRadioButtonBC->setChecked(true);
 			break;
@@ -373,16 +380,43 @@ void PuMP_ExportWidget::setPos(int index)
 	}
 }
 
-int PuMP_ExportWidget::getPos()
+PuMP_ExportPosition PuMP_ExportWidget::getPos()
 {
-	if(watermarkRadioButtonC->isChecked()) return 0;
-	if(watermarkRadioButtonTR->isChecked()) return 1;
-	if(watermarkRadioButtonTL->isChecked()) return 2;
-	if(watermarkRadioButtonTC->isChecked()) return 3;
-	if(watermarkRadioButtonBR->isChecked()) return 4;
-	if(watermarkRadioButtonBL->isChecked()) return 5;
-	if(watermarkRadioButtonBC->isChecked()) return 6;
-	return -1;
+	if(watermarkRadioButtonC->isChecked()) return Centered;
+	if(watermarkRadioButtonTR->isChecked()) return TopRight;
+	if(watermarkRadioButtonTL->isChecked()) return TopLeft;
+	if(watermarkRadioButtonTC->isChecked()) return TopCentered;
+	if(watermarkRadioButtonBR->isChecked()) return BottomRight;
+	if(watermarkRadioButtonBL->isChecked()) return BottomLeft;
+	if(watermarkRadioButtonBC->isChecked()) return BottomCentered;
+	assert(false);
+}
+
+void PuMP_ExportWidget::getConfig(
+	QPixmap &wmark,
+	int &transparency,
+	PuMP_ExportPosition &pos,
+	QFileInfo &outputDir,
+	QSize &scaleSize,
+	PuMP_ExportQuality &quality,
+	QString &format,
+	PuMP_ExportMode &mode)
+{
+	wmark = watermarkScaled;
+	transparency = watermarkSpinBoxT->value();
+	pos = getPos();
+
+	outputDir.setFile(outputLineEdit->text());
+	if(!outputDir.exists())
+	{
+		outputLineEdit->setText(QDir::homePath());
+		outputDir.setFile(QDir::homePath());
+	}
+	
+	scaleSize = QSize(outputSpinBoxW->value(), outputSpinBoxH->value());
+	quality = (PuMP_ExportQuality) outputComboBoxQuality->currentIndex();
+	format = outputComboBoxFormat->currentText();
+	mode = (PuMP_ExportMode) outputComboBoxMode->currentIndex();
 }
 
 void PuMP_ExportWidget::loadSettings()
@@ -403,9 +437,9 @@ void PuMP_ExportWidget::loadSettings()
 		PUMP_EXPORTWIDGET_TRANSPARENCY,
 		50).toInt());
 
-	setPos(PuMP_MainWindow::settings->value(
+	setPos((PuMP_ExportPosition) PuMP_MainWindow::settings->value(
 		PUMP_EXPORTWIDGET_POSITION,
-		4).toInt());
+		BottomRight).toInt());
 
 	QFileInfo f(PuMP_MainWindow::settings->value(
 		PUMP_EXPORTWIDGET_OUTPUTDIR,
@@ -421,7 +455,7 @@ void PuMP_ExportWidget::loadSettings()
 
 	outputComboBoxQuality->setCurrentIndex(PuMP_MainWindow::settings->value(
 		PUMP_EXPORTWIDGET_OUTPUTQUALITY,
-		1).toInt());
+		Smoothed).toInt());
 
 	int index = outputComboBoxFormat->findText(QString("*.jpg"));
 	if(index == -1) index = outputComboBoxFormat->findText(QString("*.jpeg"));
@@ -431,7 +465,7 @@ void PuMP_ExportWidget::loadSettings()
 		index).toInt());
 
 	outputComboBoxMode->setCurrentIndex(PuMP_MainWindow::settings->value(
-		PUMP_EXPORTWIDGET_OUTPUTMODE, 2).toInt());
+		PUMP_EXPORTWIDGET_OUTPUTMODE, KeepAspectByExpanding).toInt());
 }
 
 void PuMP_ExportWidget::storeSettings()
@@ -528,6 +562,7 @@ void PuMP_ExportWidget::on_watermarkPushButtonDefaultSize_clicked(bool checked)
 
 	if(!watermark.isNull())
 	{
+		watermarkScaled = watermark;
 		watermarkSpinBoxW->setValue(watermark.width());
 		watermarkSpinBoxW_value = watermark.width();
 		watermarkSpinBoxH->setValue(watermark.height());
@@ -592,7 +627,7 @@ void PuMP_ExportWidget::on_watermarkSpinBoxH_editingFinished()
 	}
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 
 PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent)
 	: QDialog(parent, 0), PuMP_SettingsInterface()
@@ -635,15 +670,35 @@ void PuMP_ExportDialog::storeSettings()
 {
 	PuMP_MainWindow::settings->setValue(PUMP_EXPORTDIALOG_POS, pos());
 	PuMP_MainWindow::settings->setValue(PUMP_EXPORTDIALOG_SIZE, size());
-	exportWidget->storeSettings();
+	exportWidget->storeSettings(); // perhaps don't want to save every export?
 }
 
 void PuMP_ExportDialog::accept()
 {
 	qDebug() << "accepted";
 	storeSettings();
+	
+	QPixmap watermark;
+	int transparency;
+	PuMP_ExportPosition position;
+	QFileInfo outputDir;
+	QSize scaledSize;
+	PuMP_ExportQuality quality;
+	QString fileFormat;
+	PuMP_ExportMode scalingMode;
+	exportWidget->getConfig(
+		watermark,
+		transparency,
+		position,
+		outputDir,
+		scaledSize,
+		quality,
+		fileFormat,
+		scalingMode);
+	
+	// start new export-thread and go
+	
 	QDialog::accept();
 }
 
-
-/*****************************************************************************/
+/******************************************************************************/

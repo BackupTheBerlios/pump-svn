@@ -44,6 +44,35 @@
 
 /******************************************************************************/
 
+typedef enum
+{
+	IgnoreAspect,
+	KeepAspect,
+	KeepAspectByExpanding
+}
+PuMP_ExportMode;
+
+typedef enum
+{
+	Unsmoothed,
+	Smoothed
+}
+PuMP_ExportQuality;
+
+typedef enum
+{
+	Centered,
+	TopRight,
+	TopLeft,
+	TopCentered,
+	BottomRight,
+	BottomLeft,
+	BottomCentered
+}
+PuMP_ExportPosition;
+
+/******************************************************************************/
+
 #define PUMP_EXPORTWIDGET_USEWATERMARK	"PuMP_ExportWidget::useWatermark"
 #define PUMP_EXPORTWIDGET_WATERMARK 	"PuMP_ExportWidget::watermark"
 #define PUMP_EXPORTWIDGET_WATERMARKSIZE "PuMP_ExportWidget::watermarkSize"
@@ -120,12 +149,22 @@ class PuMP_ExportWidget : public QWidget, public PuMP_SettingsInterface
 		QVBoxLayout *vboxLayout2;
 
 		void setPreview(const QString &path = QString());
-		void setPos(int index);
-		int getPos();
+		void setPos(PuMP_ExportPosition position);
+		PuMP_ExportPosition getPos();
 	
 	public:
 		PuMP_ExportWidget(QWidget *parent = 0);
 		~PuMP_ExportWidget();
+
+		void getConfig(
+			QPixmap &wmark,
+			int &transparency,
+			PuMP_ExportPosition &pos,
+			QFileInfo &outputDir,
+			QSize &scaleSize,
+			PuMP_ExportQuality &quality,
+			QString &format,
+			PuMP_ExportMode &mode);
 
 		void loadSettings();
 		void storeSettings();
