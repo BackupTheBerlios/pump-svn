@@ -27,9 +27,10 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-/*****************************************************************************/
+/******************************************************************************/
 
-PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
+PuMP_ExportWidget::PuMP_ExportWidget(QWidget *parent)
+	: QWidget(parent), PuMP_SettingsInterface()
 {
 	watermarkGroupBox = new QGroupBox(this);
 	watermarkGroupBox->setTitle("Watermark");
@@ -48,18 +49,12 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 		this,
 		SLOT(on_watermarkCheckBox2_clicked(bool)));
 	
-	int index = 0;
 	outputComboBoxMode = new QComboBox(outputGroupBox);
 	outputComboBoxMode->insertItem(0, "ignore aspect ratio");
 	outputComboBoxMode->insertItem(1, "keep aspect ratio");
 	outputComboBoxMode->insertItem(2, "keep aspect ratio by expanding");
-	outputComboBoxMode->setCurrentIndex(2);
 	outputComboBoxFormat = new QComboBox(outputGroupBox);
 	outputComboBoxFormat->insertItems(0, PuMP_MainWindow::nameFilters);
-	index = outputComboBoxFormat->findText(QString("*.jpg"));
-	if(index == -1) index = outputComboBoxFormat->findText(QString("*.jpeg"));
-	if(index == -1) index = outputComboBoxFormat->findText(QString("*.png"));
-	outputComboBoxFormat->setCurrentIndex(index);
 	outputComboBoxQuality = new QComboBox(outputGroupBox);
 	outputComboBoxQuality->insertItem(
 		0,
@@ -67,17 +62,7 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 	outputComboBoxQuality->insertItem(
 		1,
 		"with smoothing (better quality but slower)");
-	outputComboBoxQuality->setCurrentIndex(1);
 	
-	buttonBox = new QDialogButtonBox(this);
-	buttonBox->setOrientation(Qt::Horizontal);
-	buttonBox->setStandardButtons(
-		QDialogButtonBox::Cancel |
-		QDialogButtonBox::NoButton |
-		QDialogButtonBox::Ok);
-	connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
-	connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
-
 	gridLayout = new QGridLayout();
 	hboxLayout = new QHBoxLayout();
 	hboxLayout1 = new QHBoxLayout();
@@ -172,19 +157,18 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 
 	watermarkRadioButtonC = new QRadioButton(watermarkGroupBox);
 	watermarkRadioButtonC->setText("centered");
-	watermarkRadioButtonBC = new QRadioButton(watermarkGroupBox);
-	watermarkRadioButtonBC->setText("bottom center");
 	watermarkRadioButtonTR = new QRadioButton(watermarkGroupBox);
 	watermarkRadioButtonTR->setText("top right");
 	watermarkRadioButtonTL = new QRadioButton(watermarkGroupBox);
 	watermarkRadioButtonTL->setText("top left");
 	watermarkRadioButtonTC = new QRadioButton(watermarkGroupBox);
 	watermarkRadioButtonTC->setText("top center");
-	watermarkRadioButtonBL = new QRadioButton(watermarkGroupBox);
-	watermarkRadioButtonBL->setText("bottom left");
 	watermarkRadioButtonBR = new QRadioButton(watermarkGroupBox);
 	watermarkRadioButtonBR->setText("bottom right");
-	watermarkRadioButtonBR->setChecked(true);
+	watermarkRadioButtonBL = new QRadioButton(watermarkGroupBox);
+	watermarkRadioButtonBL->setText("bottom left");
+	watermarkRadioButtonBC = new QRadioButton(watermarkGroupBox);
+	watermarkRadioButtonBC->setText("bottom center");
 
 	watermarkSpinBoxW = new QSpinBox(watermarkGroupBox);
 	watermarkSpinBoxW->setMaximum(100000);
@@ -205,7 +189,6 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 		this,
 		SLOT(on_watermarkSpinBoxH_editingFinished()));
 	watermarkSpinBoxT = new QSpinBox(watermarkGroupBox);
-	watermarkSpinBoxT->setValue(50);
 	outputSpinBoxW = new QSpinBox(outputGroupBox);
 	outputSpinBoxW->setMaximum(100000);
 	outputSpinBoxW->setMinimum(1);
@@ -270,17 +253,11 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent) : QDialog(parent, 0)
 
 	vboxLayout->addWidget(watermarkGroupBox);
 	vboxLayout->addWidget(outputGroupBox);
-	vboxLayout->addWidget(buttonBox);
 
-	defaultSize.setWidth(420);
-	defaultSize.setHeight(460);
-	defaultSize = defaultSize.expandedTo(minimumSizeHint());
-	resize(defaultSize);
-	
-	setPreview();
+	loadSettings();
 }
 
-PuMP_ExportDialog::~PuMP_ExportDialog()
+PuMP_ExportWidget::~PuMP_ExportWidget()
 {
 	delete gridLayout;
 	delete hboxLayout;
@@ -297,7 +274,7 @@ PuMP_ExportDialog::~PuMP_ExportDialog()
 	delete vboxLayout2;
 }
 
-void PuMP_ExportDialog::setPreview(const QString &path)
+void PuMP_ExportWidget::setPreview(const QString &path)
 {
 	QFileInfo info(path);
 	if(info.exists())
@@ -305,6 +282,7 @@ void PuMP_ExportDialog::setPreview(const QString &path)
 		watermark.load(info.filePath());
 		if(!watermark.isNull())
 		{
+			outputGroupBox->setMaximumSize(outputGroupBox->size());
 			watermarkLineEdit->setText(path);
 			watermarkSpinBoxW->setValue(watermark.width());
 			watermarkSpinBoxW_value = watermark.width();
@@ -328,11 +306,12 @@ void PuMP_ExportDialog::setPreview(const QString &path)
 			watermarkSpinBoxW_value = watermark.width();
 			watermarkSpinBoxH->setValue(watermark.height());
 			watermarkSpinBoxH_value = watermark.height();
-	
+
 			label1->setMinimumSize(watermark.size());
 			label1->setMaximumSize(watermark.size());
 			label1->setPixmap(watermark);
 			label1->updateGeometry();
+			updateGeometry();
 		}
 	}
 	else
@@ -348,20 +327,158 @@ void PuMP_ExportDialog::setPreview(const QString &path)
 		label1->setMaximumSize(watermark.size());
 		label1->setPixmap(watermark);
 		label1->updateGeometry();
+		updateGeometry();
 	}
 }
 
-QSize PuMP_ExportDialog::sizeHint() const
+void PuMP_ExportWidget::setPos(int index)
 {
-	return defaultSize;
+	switch(index)
+	{
+		case 0:
+		{
+			watermarkRadioButtonC->setChecked(true);
+			break;
+		}
+		case 1:
+		{
+			watermarkRadioButtonTR->setChecked(true);
+			break;
+		}
+		case 2:
+		{
+			watermarkRadioButtonTL->setChecked(true);
+			break;
+		}
+		case 3:
+		{
+			watermarkRadioButtonTC->setChecked(true);
+			break;
+		}
+		case 4:
+		{
+			watermarkRadioButtonBR->setChecked(true);
+			break;
+		}
+		case 5:
+		{
+			watermarkRadioButtonBL->setChecked(true);
+			break;
+		}
+		case 6:
+		{
+			watermarkRadioButtonBC->setChecked(true);
+			break;
+		}
+	}
 }
 
-void PuMP_ExportDialog::on_outputPushButton_clicked(bool checked)
+int PuMP_ExportWidget::getPos()
+{
+	if(watermarkRadioButtonC->isChecked()) return 0;
+	if(watermarkRadioButtonTR->isChecked()) return 1;
+	if(watermarkRadioButtonTL->isChecked()) return 2;
+	if(watermarkRadioButtonTC->isChecked()) return 3;
+	if(watermarkRadioButtonBR->isChecked()) return 4;
+	if(watermarkRadioButtonBL->isChecked()) return 5;
+	if(watermarkRadioButtonBC->isChecked()) return 6;
+	return -1;
+}
+
+void PuMP_ExportWidget::loadSettings()
+{
+	watermarkCheckBox2->setChecked(!PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_USEWATERMARK,
+		false).toBool());
+
+	setPreview(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_WATERMARK,
+		"").toString());
+
+//	PuMP_MainWindow::settings->setValue(
+//		PUMP_EXPORTWIDGET_WATERMARKSIZE,
+//		QSize(watermarkSpinBoxW->value(), watermarkSpinBoxH->value()));
+
+	watermarkSpinBoxT->setValue(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_TRANSPARENCY,
+		50).toInt());
+
+	setPos(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_POSITION,
+		4).toInt());
+
+	QFileInfo f(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_OUTPUTDIR,
+		QDir::homePath()).toString());
+	if(f.exists()) outputLineEdit->setText(f.filePath());
+	else outputLineEdit->setText(QDir::homePath());
+
+	QSize oSize(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_OUTPUTSIZE,
+		QSize(640, 480)).toSize());
+	outputSpinBoxW->setValue(oSize.width());
+	outputSpinBoxH->setValue(oSize.height());
+
+	outputComboBoxQuality->setCurrentIndex(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_OUTPUTQUALITY,
+		1).toInt());
+
+	int index = outputComboBoxFormat->findText(QString("*.jpg"));
+	if(index == -1) index = outputComboBoxFormat->findText(QString("*.jpeg"));
+	if(index == -1) index = outputComboBoxFormat->findText(QString("*.png"));
+	outputComboBoxFormat->setCurrentIndex(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_OUTPUTFORMAT,
+		index).toInt());
+
+	outputComboBoxMode->setCurrentIndex(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTWIDGET_OUTPUTMODE, 2).toInt());
+}
+
+void PuMP_ExportWidget::storeSettings()
+{
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_USEWATERMARK,
+		!watermarkCheckBox2->isChecked());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_WATERMARK,
+		watermarkLineEdit->text());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_WATERMARKSIZE,
+		QSize(watermarkSpinBoxW->value(), watermarkSpinBoxH->value()));
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_TRANSPARENCY,
+		watermarkSpinBoxT->value());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_POSITION,
+		getPos());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_OUTPUTDIR,
+		outputLineEdit->text());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_OUTPUTSIZE,
+		QSize(outputSpinBoxW->value(), outputSpinBoxH->value()));
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_OUTPUTQUALITY,
+		outputComboBoxQuality->currentIndex());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_OUTPUTFORMAT,
+		outputComboBoxFormat->currentIndex());
+	PuMP_MainWindow::settings->setValue(
+		PUMP_EXPORTWIDGET_OUTPUTMODE,
+		outputComboBoxMode->currentIndex());
+}
+
+void PuMP_ExportWidget::on_outputPushButton_clicked(bool checked)
 {
 	Q_UNUSED(checked);
+	QString file = QFileDialog::getExistingDirectory(
+		this,
+		"Select output directory",
+		QDir::homePath());
+	if(!file.isEmpty()) outputLineEdit->setText(file);
 }
 
-void PuMP_ExportDialog::on_watermarkCheckBox2_clicked(bool checked)
+void PuMP_ExportWidget::on_watermarkCheckBox2_clicked(bool checked)
 {
 	label->setEnabled(!checked);
 	label1->setEnabled(!checked);
@@ -388,7 +505,7 @@ void PuMP_ExportDialog::on_watermarkCheckBox2_clicked(bool checked)
 	watermarkCheckBox2->setEnabled(true);
 }
 
-void PuMP_ExportDialog::on_watermarkPushButton_clicked(bool checked)
+void PuMP_ExportWidget::on_watermarkPushButton_clicked(bool checked)
 {
 	Q_UNUSED(checked);
 	QString file = QFileDialog::getOpenFileName(
@@ -399,13 +516,13 @@ void PuMP_ExportDialog::on_watermarkPushButton_clicked(bool checked)
 	if(!file.isEmpty()) setPreview(file);
 }
 
-void PuMP_ExportDialog::on_watermarkPushButtonDefault_clicked(bool checked)
+void PuMP_ExportWidget::on_watermarkPushButtonDefault_clicked(bool checked)
 {
 	Q_UNUSED(checked);
 	setPreview();
 }
 
-void PuMP_ExportDialog::on_watermarkPushButtonDefaultSize_clicked(bool checked)
+void PuMP_ExportWidget::on_watermarkPushButtonDefaultSize_clicked(bool checked)
 {
 	Q_UNUSED(checked);
 
@@ -419,10 +536,11 @@ void PuMP_ExportDialog::on_watermarkPushButtonDefaultSize_clicked(bool checked)
 		label1->setMinimumSize(watermark.size());
 		label1->setPixmap(watermark);
 		label1->updateGeometry();
+		updateGeometry();
 	}
 }
 
-void PuMP_ExportDialog::on_watermarkSpinBoxW_editingFinished()
+void PuMP_ExportWidget::on_watermarkSpinBoxW_editingFinished()
 {
 	if(watermarkCheckBox1->isChecked())
 	{
@@ -444,11 +562,11 @@ void PuMP_ExportDialog::on_watermarkSpinBoxW_editingFinished()
 			Qt::SmoothTransformation);
 		label1->setMinimumSize(watermarkScaled.size());
 		label1->setPixmap(watermarkScaled);
-		label1->updateGeometry();		
+		label1->updateGeometry();
 	}
 }
 
-void PuMP_ExportDialog::on_watermarkSpinBoxH_editingFinished()
+void PuMP_ExportWidget::on_watermarkSpinBoxH_editingFinished()
 {
 	if(watermarkCheckBox1->isChecked())
 	{
@@ -470,8 +588,62 @@ void PuMP_ExportDialog::on_watermarkSpinBoxH_editingFinished()
 			Qt::SmoothTransformation);
 		label1->setMinimumSize(watermarkScaled.size());
 		label1->setPixmap(watermarkScaled);
-		label1->updateGeometry();		
+		label1->updateGeometry();
 	}
 }
+
+/*****************************************************************************/
+
+PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent)
+	: QDialog(parent, 0), PuMP_SettingsInterface()
+{
+	vboxLayout = new QVBoxLayout(this);
+	exportWidget = new PuMP_ExportWidget(this);
+	buttonBox = new QDialogButtonBox(this);
+	buttonBox->setOrientation(Qt::Horizontal);
+	buttonBox->setStandardButtons(
+		QDialogButtonBox::Cancel |
+		QDialogButtonBox::NoButton |
+		QDialogButtonBox::Ok);
+
+	vboxLayout->addWidget(exportWidget);
+	vboxLayout->addWidget(buttonBox);
+
+	connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
+	connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
+
+	loadSettings();
+}
+
+PuMP_ExportDialog::~PuMP_ExportDialog()
+{
+	delete vboxLayout;
+	delete exportWidget;
+	delete buttonBox;
+}
+
+void PuMP_ExportDialog::loadSettings()
+{
+	move(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTDIALOG_POS,
+		pos()).toPoint());
+	resize(PuMP_MainWindow::settings->value(
+		PUMP_EXPORTDIALOG_SIZE, size()).toSize());
+}
+
+void PuMP_ExportDialog::storeSettings()
+{
+	PuMP_MainWindow::settings->setValue(PUMP_EXPORTDIALOG_POS, pos());
+	PuMP_MainWindow::settings->setValue(PUMP_EXPORTDIALOG_SIZE, size());
+	exportWidget->storeSettings();
+}
+
+void PuMP_ExportDialog::accept()
+{
+	qDebug() << "accepted";
+	storeSettings();
+	QDialog::accept();
+}
+
 
 /*****************************************************************************/

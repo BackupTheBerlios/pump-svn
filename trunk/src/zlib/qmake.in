@@ -1,0 +1,29 @@
+
+PUMP_CURRENT_PATH = src/zlib
+
+HEADERS += \
+	$$PUMP_CURRENT_PATH/crc32.h \
+	$$PUMP_CURRENT_PATH/deflate.h \
+	$$PUMP_CURRENT_PATH/inffast.h \
+	$$PUMP_CURRENT_PATH/inffixed.h \
+	$$PUMP_CURRENT_PATH/inflate.h \
+	$$PUMP_CURRENT_PATH/inftrees.h \
+	$$PUMP_CURRENT_PATH/trees.h \
+	$$PUMP_CURRENT_PATH/zconf.h \
+	$$PUMP_CURRENT_PATH/zconf.in.h \
+	$$PUMP_CURRENT_PATH/zlib.h \
+	$$PUMP_CURRENT_PATH/zutil.h
+
+SOURCES += \
+	$$PUMP_CURRENT_PATH/adler32.c \
+	$$PUMP_CURRENT_PATH/compress.c \
+	$$PUMP_CURRENT_PATH/crc32.c \
+	$$PUMP_CURRENT_PATH/deflate.c \
+	$$PUMP_CURRENT_PATH/gzio.c \
+	$$PUMP_CURRENT_PATH/infback.c \
+	$$PUMP_CURRENT_PATH/inffast.c \
+	$$PUMP_CURRENT_PATH/inflate.c \
+	$$PUMP_CURRENT_PATH/inftrees.c \
+	$$PUMP_CURRENT_PATH/trees.c \
+	$$PUMP_CURRENT_PATH/uncompr.c \
+	$$PUMP_CURRENT_PATH/zutil.c

@@ -29,14 +29,21 @@
 #include <QStringList>
 #include <QToolBar>
 
-/*****************************************************************************/
+#include "settings.hh"
+
+/******************************************************************************/
 
 class PuMP_DirectoryView;
 class PuMP_TabView;
 
-/*****************************************************************************/
+/******************************************************************************/
 
-class PuMP_MainWindow : public QMainWindow
+#define PUMP_MAINWINDOW_SIZE	"PuMP_MainWindow::size"
+#define PUMP_MAINWINDOW_POS		"PuMP_MainWindow::pos"
+
+/******************************************************************************/
+
+class PuMP_MainWindow : public QMainWindow, public PuMP_SettingsInterface
 {
 	Q_OBJECT
 	
@@ -78,12 +85,17 @@ class PuMP_MainWindow : public QMainWindow
 		static QAction *zoomInAction;
 		static QAction *zoomOutAction;
 		
+		static QSettings *settings;
+		
 		static QStringList nameFilters;
 		static QString nameFilterString1;
 		static QString nameFilterString2;
 
 		PuMP_MainWindow(QWidget *parent = 0, Qt::WindowFlags flags = 0);
 		~PuMP_MainWindow();
+
+		void loadSettings();
+		void storeSettings();
 
 	public slots:
 		void on_about();
@@ -92,6 +104,6 @@ class PuMP_MainWindow : public QMainWindow
 		void on_statusBarUpdate(int value, const QString &text);
 };
 
-/*****************************************************************************/
+/******************************************************************************/
 
 #endif /*MAINWINDOW_HH_*/

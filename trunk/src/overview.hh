@@ -36,12 +36,15 @@
 #include <QStringList>
 #include <QThread>
 
+#include "settings.hh"
+
 #define THUMB_SIZE			64
 #define ICON_PADDING		10
 #define ITEM_STRETCH		2.5
 #define ITEM_SPACING		10
+#define PUMP_OVERVIEW_DIR	"PuMP_Overview::dir"
 
-/*****************************************************************************/
+/******************************************************************************/
 
 class PuMP_OverviewModel : public QAbstractListModel
 {
@@ -76,7 +79,7 @@ class PuMP_OverviewModel : public QAbstractListModel
 		void setFontMetrics(const QFontMetrics &fontMetrics);
 };
 
-/*****************************************************************************/
+/******************************************************************************/
 
 class PuMP_OverviewLoader : public QThread
 {
@@ -112,9 +115,9 @@ class PuMP_OverviewLoader : public QThread
 			bool wasKilled);
 };
 
-/*****************************************************************************/
+/******************************************************************************/
 
-class PuMP_Overview : public QListView
+class PuMP_Overview : public QListView, public PuMP_SettingsInterface
 {
 	Q_OBJECT
 	
@@ -126,6 +129,7 @@ class PuMP_Overview : public QListView
 		PuMP_OverviewLoader loader;
 
 		QDir dir;
+		QString dirFromSettings;
 		QList<QFileInfo> current;
 		
 		void contextMenuEvent(QContextMenuEvent *e);
@@ -139,6 +143,8 @@ class PuMP_Overview : public QListView
 		PuMP_Overview(QWidget *parent = 0);
 		~PuMP_Overview();
 		
+		void loadSettings();
+		void storeSettings();
 		void save();
 		
 	public slots:
@@ -164,6 +170,6 @@ class PuMP_Overview : public QListView
 
 };
 
-/*****************************************************************************/
+/******************************************************************************/
 
 #endif /*OVERVIEW_HH_*/

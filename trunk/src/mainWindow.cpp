@@ -69,6 +69,9 @@ QAction *PuMP_MainWindow::stopAction = NULL;
 QAction *PuMP_MainWindow::zoomInAction = NULL;
 QAction *PuMP_MainWindow::zoomOutAction = NULL;
 
+/** init static pointer to settings */
+QSettings *PuMP_MainWindow::settings = NULL;
+
 /** init static string-list */
 QStringList PuMP_MainWindow::nameFilters;
 QString PuMP_MainWindow::nameFilterString1;
@@ -82,7 +85,7 @@ QString PuMP_MainWindow::nameFilterString2;
  * @param	flags	Qt-specific window-flags (usually 0).
  */
 PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
-	: QMainWindow(parent, flags)
+	: QMainWindow(parent, flags), PuMP_SettingsInterface()
 {
 	// find out which image-formats are supported
 	getSupportedImageFormats();
@@ -197,13 +200,10 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	on_statusBarUpdate(100, text);
 	
 	// main window
+	loadSettings();
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
-	QSize size(600, 450);
-	size = size.expandedTo(minimumSizeHint());
-	resize(size);
-	
-	PuMP_MainWindow::homeAction->trigger();	
+
 }
 
 /**
@@ -211,6 +211,8 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
  */
 PuMP_MainWindow::~PuMP_MainWindow()
 {
+	storeSettings();
+
 	delete directoryView;
 	delete tabView;
 
@@ -239,6 +241,24 @@ PuMP_MainWindow::~PuMP_MainWindow()
 	delete PuMP_MainWindow::stopAction;
 	delete PuMP_MainWindow::zoomInAction;
 	delete PuMP_MainWindow::zoomOutAction;
+}
+
+void PuMP_MainWindow::loadSettings()
+{
+	resize(PuMP_MainWindow::settings->value(
+		PUMP_MAINWINDOW_SIZE,
+		QSize(600, 450)).toSize());
+	move(PuMP_MainWindow::settings->value(
+		PUMP_MAINWINDOW_POS,
+		QPoint()).toPoint());
+}
+
+void PuMP_MainWindow::storeSettings()
+{
+	QSize currentSize = size();
+	PuMP_MainWindow::settings->setValue(PUMP_MAINWINDOW_SIZE, currentSize);
+	QPoint currentPos = pos();
+	PuMP_MainWindow::settings->setValue(PUMP_MAINWINDOW_POS, currentPos);
 }
 
 /**

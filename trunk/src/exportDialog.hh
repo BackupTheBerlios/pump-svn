@@ -40,20 +40,28 @@
 #include <QVariant>
 #include <QVBoxLayout>
 
-/*****************************************************************************/
+#include "settings.hh"
 
-class PuMP_ExportDialog : public QDialog
+/******************************************************************************/
+
+#define PUMP_EXPORTWIDGET_USEWATERMARK	"PuMP_ExportWidget::useWatermark"
+#define PUMP_EXPORTWIDGET_WATERMARK 	"PuMP_ExportWidget::watermark"
+#define PUMP_EXPORTWIDGET_WATERMARKSIZE "PuMP_ExportWidget::watermarkSize"
+#define PUMP_EXPORTWIDGET_TRANSPARENCY	"PuMP_ExportWidget::transparency"
+#define PUMP_EXPORTWIDGET_POSITION		"PuMP_ExportWidget::position"
+#define PUMP_EXPORTWIDGET_OUTPUTDIR 	"PuMP_ExportWidget::outputDir"
+#define PUMP_EXPORTWIDGET_OUTPUTSIZE 	"PuMP_ExportWidget::outputSize"
+#define PUMP_EXPORTWIDGET_OUTPUTQUALITY	"PuMP_ExportWidget::outputQuality"
+#define PUMP_EXPORTWIDGET_OUTPUTFORMAT 	"PuMP_ExportWidget::outputFormat"
+#define PUMP_EXPORTWIDGET_OUTPUTMODE 	"PuMP_ExportWidget::outputMode"
+
+/******************************************************************************/
+
+class PuMP_ExportWidget : public QWidget, public PuMP_SettingsInterface 
 {
 	Q_OBJECT
 
 	protected:
-//		QList<QFileInfo> files;
-//		QFileInfo dest;
-//		QFileInfo watermark;
-//		QSize watermarkPos;
-//		QSize destSize;
-//		int options;
-		
 		int watermarkSpinBoxW_value;
 		int watermarkSpinBoxH_value;
 
@@ -62,7 +70,6 @@ class PuMP_ExportDialog : public QDialog
 		QComboBox *outputComboBoxMode;
 		QComboBox *outputComboBoxFormat;
 		QComboBox *outputComboBoxQuality;
-		QDialogButtonBox *buttonBox;
 		QGridLayout *gridLayout;
 		QGroupBox *watermarkGroupBox;
 		QGroupBox *outputGroupBox;
@@ -103,7 +110,6 @@ class PuMP_ExportDialog : public QDialog
 		QRadioButton *watermarkRadioButtonTC;
 		QRadioButton *watermarkRadioButtonBL;
 		QRadioButton *watermarkRadioButtonBR;
-		QSize defaultSize;
 		QSpinBox *watermarkSpinBoxW;
 		QSpinBox *watermarkSpinBoxH;
 		QSpinBox *watermarkSpinBoxT;
@@ -112,13 +118,17 @@ class PuMP_ExportDialog : public QDialog
 		QVBoxLayout *vboxLayout;
 		QVBoxLayout *vboxLayout1;
 		QVBoxLayout *vboxLayout2;
-		
+
 		void setPreview(const QString &path = QString());
-		QSize sizeHint() const;
+		void setPos(int index);
+		int getPos();
 	
 	public:
-		PuMP_ExportDialog(QWidget *parent = 0);
-		~PuMP_ExportDialog();
+		PuMP_ExportWidget(QWidget *parent = 0);
+		~PuMP_ExportWidget();
+
+		void loadSettings();
+		void storeSettings();
 
 	public slots:
 		void on_outputPushButton_clicked(bool checked);
@@ -130,6 +140,41 @@ class PuMP_ExportDialog : public QDialog
 		void on_watermarkSpinBoxH_editingFinished();
 };
 
-/*****************************************************************************/
+/******************************************************************************/
+
+#define PUMP_EXPORTDIALOG_POS	"PuMP_ExportDialog::pos"
+#define PUMP_EXPORTDIALOG_SIZE	"PuMP_ExportDialog::size"	
+
+/******************************************************************************/
+
+class PuMP_ExportDialog : public QDialog, public PuMP_SettingsInterface
+{
+	Q_OBJECT
+
+	protected:
+//		QList<QFileInfo> files;
+//		QFileInfo dest;
+//		QFileInfo watermark;
+//		QSize watermarkPos;
+//		QSize destSize;
+//		int options;
+
+		QVBoxLayout *vboxLayout;
+
+		PuMP_ExportWidget *exportWidget;
+		QDialogButtonBox *buttonBox;
+		
+		void accept();
+	
+	public:
+		PuMP_ExportDialog(QWidget *parent = 0);
+		~PuMP_ExportDialog();
+
+		void loadSettings();
+		void storeSettings();
+
+};
+
+/******************************************************************************/
 
 #endif /*EXPORTDIALOG_HH_*/

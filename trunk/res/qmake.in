@@ -1,0 +1,8 @@
+
+PUMP_CURRENT_PATH = res
+
+# built in resource-files
+RESOURCES = $$PUMP_CURRENT_PATH/PuMP.qrc
+
+# defines for win32 builds
+#win32{ RC_FILE = $$PUMP_CURRENT_PATH/PuMP.rc }

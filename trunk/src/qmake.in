@@ -1,0 +1,28 @@
+
+PUMP_CURRENT_PATH = src
+
+HEADERS += \
+	$$PUMP_CURRENT_PATH/configDialog.hh \
+	$$PUMP_CURRENT_PATH/configPages.hh \
+	$$PUMP_CURRENT_PATH/directoryView.hh \
+	$$PUMP_CURRENT_PATH/export.hh \
+	$$PUMP_CURRENT_PATH/exportDialog.hh \
+	$$PUMP_CURRENT_PATH/imageView.hh \
+	$$PUMP_CURRENT_PATH/mainWindow.hh \
+	$$PUMP_CURRENT_PATH/overview.hh \
+	$$PUMP_CURRENT_PATH/settings.hh \
+	$$PUMP_CURRENT_PATH/tabView.hh \
+	$$PUMP_CURRENT_PATH/zlib/zlib.h
+	
+SOURCES += \
+	$$PUMP_CURRENT_PATH/configDialog.cpp \
+	$$PUMP_CURRENT_PATH/configPages.cpp \
+	$$PUMP_CURRENT_PATH/directoryView.cpp \
+	$$PUMP_CURRENT_PATH/export.cpp \
+	$$PUMP_CURRENT_PATH/exportDialog.cpp \
+	$$PUMP_CURRENT_PATH/imageView.cpp \
+	$$PUMP_CURRENT_PATH/main.cpp \
+	$$PUMP_CURRENT_PATH/mainWindow.cpp \
+	$$PUMP_CURRENT_PATH/overview.cpp \
+	$$PUMP_CURRENT_PATH/settings.cpp \
+	$$PUMP_CURRENT_PATH/tabView.cpp

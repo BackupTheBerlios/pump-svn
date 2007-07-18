@@ -1,0 +1,19 @@
+
+PUMP_CURRENT_PATH = src/zip
+
+HEADERS += \
+	$$PUMP_CURRENT_PATH/crypt.h \
+	$$PUMP_CURRENT_PATH/zip.h
+
+SOURCES += \
+	$$PUMP_CURRENT_PATH/zip.c
+
+win32 {
+	HEADERS += $$PUMP_CURRENT_PATH/iowin32.h
+	SOURCES += $$PUMP_CURRENT_PATH/iowin32.c
+}
+
+!win32 {
+	HEADERS += $$PUMP_CURRENT_PATH/ioapi.h
+	SOURCES += $$PUMP_CURRENT_PATH/ioapi.c
+}

@@ -348,7 +348,8 @@ QAction *PuMP_Overview::openAction = NULL;
  * 						application can handle.
  * @param	parent		The parent-widget of this object.
  */
-PuMP_Overview::PuMP_Overview(QWidget *parent) : QListView(parent)
+PuMP_Overview::PuMP_Overview(QWidget *parent)
+	: QListView(parent), PuMP_SettingsInterface()
 {
 	progress = 0;
 	progressMax = 1;
@@ -419,6 +420,12 @@ PuMP_Overview::PuMP_Overview(QWidget *parent) : QListView(parent)
 		SIGNAL(activated(const QModelIndex &)),
 		this,
 		SLOT(on_activated(const QModelIndex &)));
+	
+	loadSettings();
+	PuMP_Overview::openAction->setData(dirFromSettings);
+	PuMP_DirectoryView::openAction->setData(dirFromSettings);
+	PuMP_Overview::openAction->trigger();
+	PuMP_DirectoryView::openAction->trigger();
 }
 
 /**
@@ -429,8 +436,27 @@ PuMP_Overview::~PuMP_Overview()
 {
 	delete PuMP_Overview::openAction;
 
+	storeSettings();
 	on_stop();
 	model.clear();
+}
+
+/**
+ * Function that loads the formerly stored settings for this class.
+ */
+void PuMP_Overview::loadSettings()
+{
+	dirFromSettings = PuMP_MainWindow::settings->value(
+		PUMP_OVERVIEW_DIR,
+		QDir::homePath()).toString();
+}
+
+/**
+ * Function that stores all settings for this class.
+ */
+void PuMP_Overview::storeSettings()
+{
+	PuMP_MainWindow::settings->setValue(PUMP_OVERVIEW_DIR, dir.path());
 }
 
 /**
