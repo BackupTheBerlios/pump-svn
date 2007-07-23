@@ -22,95 +22,57 @@
 #ifndef CONFIGDIALOG_HH_
 #define CONFIGDIALOG_HH_
 
-#include <QColor>
 #include <QDialog>
-#include <QFileInfo>
-#include <QSettings>
-#include <QWidget>
+#include <QHBoxLayout>
 #include <QListWidget>
-#include <QPalette>
 #include <QPushButton>
 #include <QStackedWidget>
-#include <QHBoxLayout>
 #include <QVBoxLayout>
 
-#include <QDebug>
+#include "settings.hh"
+#include "configPages.hh"
+#include "exportDialog.hh"
 
-/* Structs to store config values */
-enum exportFormat {
-	ZIP_IMAGES,
-	ZIP_IMAGES_WITH_PREVIEW,
-	HTML_GALLERY,
-	PLAIN_FOLDER,
-	PLAIN_FOLDER_WITH_PREVIEW
-};
+/******************************************************************************/
 
-typedef struct basicConfig_s {
-	enum exportFormat exportFormat;	
-	QString currentExportPath;
-	
-	/* was sonst:
-	 * Zielgröße für Bilder, Previews?
-	 * 
-	 */
-} basicConfig_t;
-
-typedef struct advancedConfig_s {
-	/* Image Parameters */
-	QSize previewSize;
-	QSize exportImageSize;
-	
-} advancedConfig_t;
-
-typedef struct exportConfig_s {
-	
-} exportConfig_t;
-
-typedef struct configValues_s {
-	basicConfig_t bc;
-	advancedConfig_t ac;
-	exportConfig_t ec;
-} configValues_t;
-
-
-
-
-class configDialog : public QDialog
+class PuMP_ConfigDialog : public QDialog, public PuMP_SettingsInterface
 {
 	Q_OBJECT
-	
-public:
-	configDialog(QWidget *parent=0);
-	virtual ~configDialog();
-	
-	/* Image parameters */
-	void setWatermarkFile(QFileInfo &watermarkFile);
-	QFileInfo getWatermarkFile(void);
-	void setExportImageSize(QSize imageSize);
-	QSize getExportImageSize(void);
-	void setWatermarkSize(QSize watermarkSize);
-	QSize getWatermarkSize(void);
-	void setWatermarkSizeRelative(int percentOfSize=0);
-	int getWatermarkSizeRelative(void);
-	
-	/* Export Parameters */ 
-	void setExportFormat(enum exportFormat);
-	enum exportFormat getExportFormat(void);
-	
 
-public slots:
-	void save(void);
-	void load(void);
-	void changePage(QListWidgetItem *current, QListWidgetItem *previous);
-	
-private:
-	QSettings *PuMPSettings;
-	inline void initSettings(void);
-	
-	QListWidget *configWidget;
-	QStackedWidget *pagesWidget;
-	void createIcons(void);
+	protected:
+		QHBoxLayout *hboxLayout1;
+		QHBoxLayout *hboxLayout2;
+		QVBoxLayout *vboxLayout;
+		QListWidget *configWidget;
+		QListWidgetItem *basConfig;
+		QListWidgetItem *expConfig;
+		QListWidgetItem *advConfig;
+		QListWidgetItem *about;
+		QPushButton *okButton;
+		QPushButton *applyButton;
+		QPushButton *cancelButton;
+		QPushButton *resetButton;
+		QStackedWidget *pagesWidget;
+		
+		PuMP_BasicConfigWidget *basicWidget;
+		PuMP_ExportWidget *exportWidget;
+		PuMP_AboutWidget *aboutPuMP;
+		PuMP_AboutQtWidget *aboutQt;
 
+		void createIcons();
+
+	public:
+		PuMP_ConfigDialog(QWidget *parent = 0);
+		~PuMP_ConfigDialog();
+
+		void loadSettings();
+		void storeSettings();
+	
+	public slots:
+		void changePage(QListWidgetItem *current, QListWidgetItem *previous);
+	
 };
+
+/******************************************************************************/
 
 #endif /*CONFIGDIALOG_HH_*/

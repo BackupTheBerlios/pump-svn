@@ -2,6 +2,7 @@
 PUMP_CURRENT_PATH = src
 
 HEADERS += \
+	$$PUMP_CURRENT_PATH/about.hh \
 	$$PUMP_CURRENT_PATH/configDialog.hh \
 	$$PUMP_CURRENT_PATH/configPages.hh \
 	$$PUMP_CURRENT_PATH/directoryView.hh \

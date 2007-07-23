@@ -653,8 +653,6 @@ PuMP_ExportDialog::PuMP_ExportDialog(QWidget *parent)
 PuMP_ExportDialog::~PuMP_ExportDialog()
 {
 	delete vboxLayout;
-	delete exportWidget;
-	delete buttonBox;
 }
 
 void PuMP_ExportDialog::loadSettings()

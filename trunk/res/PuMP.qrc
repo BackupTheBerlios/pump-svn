@@ -1,12 +1,10 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
 	<file>./about.png</file>
-	<file>./advancedConfiguration.png</file>
 	<file>./back.png</file>
-	<file>./basicConfiguration.png</file>
+	<file>./configure128.png</file>
 	<file>./default.png</file>
 	<file>./exit.png</file>
-	<file>./export.png</file>
 	<file>./filesave.png</file>
 	<file>./filesaveas.png</file>
 	<file>./folder16.png</file>
@@ -19,10 +17,13 @@
 	<file>./hmirror.png</file>
 	<file>./next.png</file>
 	<file>./previous.png</file>
+	<file>./qt-logo64.png</file>
+	<file>./qt-logo128.png</file>
 	<file>./reload.png</file>
 	<file>./rotate_ccw.png</file>
 	<file>./rotate_cw.png</file>
 	<file>./save_all.png</file>
+	<file>./save_all128.png</file>
 	<file>./stop.png</file>
 	<file>./tab_new.png</file>
 	<file>./tab_remove.png</file>

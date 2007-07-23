@@ -99,6 +99,7 @@ class PuMP_MainWindow : public QMainWindow, public PuMP_SettingsInterface
 
 	public slots:
 		void on_about();
+		void on_aboutQt();
 		void on_exportAction();
 		void on_forceExit();
 		void on_statusBarUpdate(int value, const QString &text);

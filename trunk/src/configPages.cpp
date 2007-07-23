@@ -1,79 +1,127 @@
+/*
+ * Copyright 2007 Christoph Werle, Tobias Schlager
+ * 
+ * This file is part of "PuMP - Publish My Pictures".
+ *
+ * "Publish My Pictures" is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or any later version.
+ *
+ * "Publish My Pictures" is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with "Publish My Pictures"; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ * 
+ */
+
 #include "configPages.hh"
 
-BasicConfiguration::BasicConfiguration(QWidget *parent)
-	:QWidget(parent)
-{
-	qDebug() << "BasicConfiguration";
-	QLabel *ExportLabel = new QLabel(tr("Exportformat"));
-	QComboBox *exportCombo = new QComboBox;
-	exportCombo->addItem(tr("Scaled Images without watermark"));
-	exportCombo->addItem(tr("Scaled Images with watermark"));
-	exportCombo->addItem(tr("Basic HTML gallery"));
-	exportCombo->addItem(tr("Advanced HTML gallery"));
-	exportCombo->addItem(tr("Big/Small as .zip archive"));
-	QHBoxLayout *basicExportLayout = new QHBoxLayout;
-	basicExportLayout->addWidget(ExportLabel);
-	basicExportLayout->addSpacing(10);
-	basicExportLayout->addWidget(exportCombo);
-	
-	QLabel *DirLabel = new QLabel(tr("Current Directory"));
-	
-	QHBoxLayout *DirStatusLayout = new QHBoxLayout;
-	DirStatusLayout->addWidget(DirLabel);
-	DirStatusLayout->addSpacing(10);
+/******************************************************************************/
 
+PuMP_BasicConfigWidget::PuMP_BasicConfigWidget(QWidget *parent)
+	: QWidget(parent), PuMP_SettingsInterface()
+{
 	
-	QPushButton *exportDirectoryButton =
-		new QPushButton(tr("Select export directory..."));
-	connect(exportDirectoryButton, SIGNAL(clicked()), this, SLOT(setExportPath()));
+}
+
+PuMP_BasicConfigWidget::~PuMP_BasicConfigWidget()
+{
+	
+}
 		
-	QVBoxLayout *mainLayout = new QVBoxLayout;
-	mainLayout->addItem(basicExportLayout);
-	mainLayout->addItem(DirStatusLayout);
-	mainLayout->addWidget(exportDirectoryButton);
-	
-	setLayout(mainLayout);
+void PuMP_BasicConfigWidget::loadSettings()
+{
 	
 }
 
-void BasicConfiguration::setExportPath()
+void PuMP_BasicConfigWidget::storeSettings()
 {
-//	QFileDialog exportPathDialog(this);
-//	exportPathDialog.setFileMode(QFileDialog::DirectoryOnly);
-//	exportPathDialog.setViewMode(QFileDialog::Detail);
-//	QStringList fileNames;
-//	if (exportPathDialog.exec())
-//		fileNames = exportPathDialog.selectedFiles();
-	QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
-					"/home",
-					QFileDialog::ShowDirsOnly
-					|QFileDialog::DontResolveSymlinks
-			   );
-
-	qDebug() << "Selected directory: " << dir;
-}
-
-void BasicConfiguration::currentExportPath()
-{
-	/* read from config, otherwise $HOME */
-	qDebug() << "BasicConfigration::currentExportPath()";
 	
-};
-
-ExportConfiguration::ExportConfiguration(QWidget *parent)
-	:QWidget(parent)
-{
-	qDebug() << "ExportConfiguration";	
 }
 
-AdvancedConfiguration::AdvancedConfiguration(QWidget *parent)
-	:QWidget(parent)
+/******************************************************************************/
+
+PuMP_AboutWidget::PuMP_AboutWidget(QWidget *parent) : QWidget(parent)
 {
-	qDebug() << "AdvancedConfiguration";
+	QLabel *leftLabel = new QLabel();
+	leftLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+	leftLabel->setPixmap(QPixmap(":/pump.png"));
+	QLabel *rightLabel = new QLabel();
+	rightLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+	rightLabel->setWordWrap(true);
+	rightLabel->setText("<h1>About PuMP</h1>" \
+		"<p>This program uses Qt Open Source Edition version " \
+		QT_VERSION_STR \
+		".</p>" \
+		"<p>Qt Open Source Edition is intended for the development of Open " \
+		"Source applications. You need a commercial Qt license for " \
+		"development of proprietary (closed source) applications.</p>" \
+		"<p>Please see www.trolltech.com/company/model/ for an overview of " \
+		"Qt licensing.</p>" \
+		"<p>Qt is a C++ toolkit for cross-platform application " \
+		"development.</p>" \
+		"<p>Qt provides single-source portability across MS Windows, Mac OS " \
+		"X, Linux, and all major commercial Unix variants. Qt is also " \
+		"available for embedded devices as Qtopia Core.</p>" \
+		"<p>Qt is a Trolltech product. See www.trolltech.com/qt/ for more " \
+		"information.</p>");
+
+	hboxLayout = new QHBoxLayout(this);
+	hboxLayout->addWidget(leftLabel);
+	hboxLayout->addWidget(rightLabel);
+	
+	setMaximumWidth(400);
 }
 
-AboutPage::AboutPage(QWidget *parent)
-	:QWidget(parent)
+PuMP_AboutWidget::~PuMP_AboutWidget()
 {
-	qDebug() << "AboutPage()";
+	delete hboxLayout;
 }
+
+/******************************************************************************/
+
+PuMP_AboutQtWidget::PuMP_AboutQtWidget(QWidget *parent) : QWidget(parent)
+{
+	QLabel *leftLabel = new QLabel();
+	leftLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+	leftLabel->setPixmap(QPixmap(":/qt-logo64.png"));
+	QLabel *rightLabel = new QLabel();
+	rightLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+	rightLabel->setWordWrap(true);
+	rightLabel->setText("<h1>About Qt</h1>" \
+		"<p>This program uses Qt Open Source Edition version " \
+		QT_VERSION_STR \
+		".</p>" \
+		"<p>Qt Open Source Edition is intended for the development of Open " \
+		"Source applications. You need a commercial Qt license for " \
+		"development of proprietary (closed source) applications.</p>" \
+		"<p>Please see <a href=\"http://www.trolltech.com/company/model/\">" \
+		"www.trolltech.com/company/model/</a> for an overview of " \
+		"Qt licensing.</p>" \
+		"<p>Qt is a C++ toolkit for cross-platform application " \
+		"development.</p>" \
+		"<p>Qt provides single-source portability across MS Windows, Mac OS " \
+		"X, Linux, and all major commercial Unix variants. Qt is also " \
+		"available for embedded devices as Qtopia Core.</p>" \
+		"<p>Qt is a Trolltech product. See " \
+		"<a href=\"http://www.trolltech.com/qt/\">www.trolltech.com/qt/</a> " \
+		"for more information.</p>");
+
+	hboxLayout = new QHBoxLayout(this);
+	hboxLayout->addWidget(leftLabel);
+	hboxLayout->addWidget(rightLabel);
+	
+	setMaximumWidth(400);
+}
+
+PuMP_AboutQtWidget::~PuMP_AboutQtWidget()
+{
+	delete hboxLayout;
+}
+
+/******************************************************************************/

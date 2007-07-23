@@ -19,6 +19,7 @@
  * 
  */
 
+#include "about.hh"
 #include "configDialog.hh"
 #include "directoryView.hh"
 #include "exportDialog.hh"
@@ -28,7 +29,6 @@
 
 #include <assert.h>
 
-#include <QApplication>
 #include <QByteArray>
 #include <QDebug>
 #include <QFileInfo>
@@ -203,7 +203,6 @@ PuMP_MainWindow::PuMP_MainWindow(QWidget *parent, Qt::WindowFlags flags)
 	loadSettings();
 	/*setWindowIcon(:/PuMP32.png);*/
 	setWindowTitle("PuMP - Publish My Pictures");
-
 }
 
 /**
@@ -310,8 +309,8 @@ void PuMP_MainWindow::setupActions()
 	connect(
 		PuMP_MainWindow::aboutQtAction,
 		SIGNAL(triggered()),
-		qApp,
-		SLOT(aboutQt()));
+		this,
+		SLOT(on_aboutQt()));
 
 	PuMP_MainWindow::backwardAction = new QAction(
 		QIcon(":/back.png"),
@@ -499,7 +498,15 @@ void PuMP_MainWindow::setupActions()
  */
 void PuMP_MainWindow::on_about()
 {
-	
+	PuMP_AboutMessage::aboutPuMP(this);
+}
+
+/**
+ * Slot-function that shows Qt's about-dialog.
+ */
+void PuMP_MainWindow::on_aboutQt()
+{
+	PuMP_AboutMessage::aboutQt(this);
 }
 
 void PuMP_MainWindow::on_exportAction()
